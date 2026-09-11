@@ -66,6 +66,7 @@ export default {
     feedRewriteRulesPlaceholder: "Please enter rewrite rules",
     feedScraperRules: "Scraper rules",
     feedScraperRulesPlaceholder: "Please enter scraper rules",
+    parsingErrorFallback: "This feed failed to refresh recently",
     feedType: "Type",
     feed: "Feed or Site URL",
     youtubeChannel: "Youtube channel",

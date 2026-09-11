@@ -3,7 +3,6 @@ import { Link, useParams } from "react-router-dom";
 import {
   RefreshCw,
   CircleCheck,
-  TriangleAlert,
   FilePen,
   Trash2,
 } from "lucide-react";
@@ -18,6 +17,7 @@ import { ContextMenu, ContextMenuItem } from "@/components/ui/ContextMenu";
 import { useTranslation } from "react-i18next";
 import { handleRefresh } from "@/handlers/feedHandlers";
 import { handleMarkAllRead } from "@/handlers/articleHandlers";
+import FeedParsingErrorIndicator from "@/components/FeedList/components/FeedParsingErrorIndicator.jsx";
 import { useStore } from "@nanostores/react";
 import { getFeedCount } from "@/stores/feedsStore.js";
 import {
@@ -65,11 +65,11 @@ const FeedItem = ({ feed }) => {
         >
           <FeedIcon feedId={feed.id} />
           <span className="flex-1 flex items-center gap-1">
-            {feed.parsing_error_count > 0 && (
-              <span className="text-warning">
-                <TriangleAlert className="size-4" />
-              </span>
-            )}
+            <FeedParsingErrorIndicator
+              feed={feed}
+              fallbackMessage={t("feed.parsingErrorFallback")}
+              isMobile={isMobile}
+            />
             <span className="line-clamp-1">{feed.title}</span>
           </span>
           <span className="text-muted opacity-60 text-xs">

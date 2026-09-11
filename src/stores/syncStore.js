@@ -1,5 +1,6 @@
 import { atom } from "nanostores";
 import minifluxAPI from "../api/miniflux";
+import { mapServerFeedToLocal } from "../lib/feedMetadata";
 import {
   getFeeds,
   addArticles,
@@ -14,7 +15,9 @@ import {
 import { settingsState } from "./settingsStore";
 
 // 在线状态
-export const isOnline = atom(navigator.onLine);
+export const isOnline = atom(
+  typeof navigator !== "undefined" ? navigator.onLine : true,
+);
 // 同步状态
 export const isSyncing = atom(false);
 export const lastSync = atom(null);
@@ -23,6 +26,9 @@ export const error = atom(null);
 
 // 全局定时器变量
 let syncInterval = null;
+let pendingForceSync = false;
+let inFlightSync = null;
+let activeSessionState = null;
 
 const SYNC_CONFIG = {
   BATCH_SIZE: 1000,
@@ -69,22 +75,7 @@ async function syncFeeds() {
       });
     }
 
-    await addFeeds(
-      serverFeeds.map((feed) => ({
-        id: feed.id,
-        title: feed.title,
-        url: feed.feed_url,
-        site_url: feed.site_url,
-        crawler: feed.crawler,
-        hide_globally: feed.hide_globally,
-        categoryId: feed.category.id,
-        parsing_error_count: feed.parsing_error_count,
-        scraper_rules: feed.scraper_rules,
-        keeplist_rules: feed.keeplist_rules,
-        blocklist_rules: feed.blocklist_rules,
-        rewrite_rules: feed.rewrite_rules,
-      })),
-    );
+    await addFeeds(serverFeeds.map(mapServerFeedToLocal));
   } catch (error) {
     console.error("同步订阅源失败:", error);
     throw error;
@@ -166,31 +157,70 @@ async function handleIncrementalSync(since) {
   }
 }
 
+function notifySyncWaiters(sessionState, iteration, err) {
+  for (const waiter of sessionState.waiters) {
+    if (iteration === 1 && waiter.fromIteration === 0) {
+      waiter.error = err;
+    } else if (iteration > waiter.fromIteration && waiter.fromIteration > 0) {
+      waiter.error = err;
+    }
+  }
+}
+
+function startSyncSession(initialWaiters = []) {
+  if (inFlightSync) {
+    return inFlightSync;
+  }
+
+  const sessionState = {
+    iteration: 0,
+    waiters: initialWaiters,
+    lastError: null,
+  };
+
+  const session = (async () => {
+    isSyncing.set(true);
+    error.set(null);
+
+    try {
+      do {
+        pendingForceSync = false;
+        sessionState.iteration += 1;
+        const currentIteration = sessionState.iteration;
+        sessionState.lastError = null;
+
+        try {
+          await syncFeeds();
+          await syncEntries();
+          const now = new Date();
+          setLastSyncTime(now);
+          lastSync.set(now);
+        } catch (err) {
+          error.set(err);
+          sessionState.lastError = err;
+          notifySyncWaiters(sessionState, currentIteration, err);
+        }
+      } while (pendingForceSync);
+    } finally {
+      isSyncing.set(false);
+      if (inFlightSync === session) {
+        inFlightSync = null;
+        activeSessionState = null;
+      }
+    }
+  })();
+
+  inFlightSync = session;
+  activeSessionState = sessionState;
+  return session;
+}
+
 // 执行完整同步
 export async function sync() {
   // 如果网络不在线或正在同步，则不执行同步
-  if (!isOnline.get() || isSyncing.get()) return;
+  if (!isOnline.get() || inFlightSync) return;
 
-  // 设置同步状态为正在同步
-  isSyncing.set(true);
-  error.set(null);
-  console.log("执行同步");
-
-  try {
-    // 同步订阅源并保存到数据库
-    await syncFeeds();
-    // 同步文章并保存到数据库
-    await syncEntries();
-    // 设置最后同步时间
-    const now = new Date();
-    setLastSyncTime(now);
-    lastSync.set(now);
-  } catch (err) {
-    error.set(err);
-  } finally {
-    // 设置同步状态为未同步
-    isSyncing.set(false);
-  }
+  await startSyncSession();
 }
 
 // 重置同步定时器
@@ -234,7 +264,7 @@ export function stopAutoSync() {
 }
 
 async function performSync() {
-  if (!isOnline.get() || isSyncing.get()) return;
+  if (!isOnline.get() || inFlightSync) return;
 
   try {
     const lastSyncTime = getLastSyncTime();
@@ -256,11 +286,42 @@ async function performSync() {
 
 // 手动强制同步,由侧边栏刷新按钮触发
 export async function forceSync() {
-  if (isOnline.get() && !isSyncing.get()) {
-    try {
-      await sync();
-    } catch (error) {
-      console.error("强制同步失败:", error);
-    }
+  if (!isOnline.get()) return;
+
+  if (inFlightSync) {
+    pendingForceSync = true;
+    return;
   }
+
+  try {
+    await startSyncSession();
+  } catch (error) {
+    console.error("强制同步失败:", error);
+  }
+}
+
+export async function forceSyncWithWait() {
+  if (!isOnline.get()) return;
+
+  const waiter = { fromIteration: 0, error: null };
+
+  if (inFlightSync) {
+    pendingForceSync = true;
+    waiter.fromIteration = activeSessionState.iteration;
+    activeSessionState.waiters.push(waiter);
+    await inFlightSync;
+  } else {
+    await startSyncSession([waiter]);
+  }
+
+  if (waiter.error) {
+    throw waiter.error;
+  }
+}
+
+export function __resetSyncStoreForTests() {
+  pendingForceSync = false;
+  inFlightSync = null;
+  activeSessionState = null;
+  isSyncing.set(false);
 }
