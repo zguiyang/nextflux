@@ -67,6 +67,7 @@ export default {
     feedRewriteRulesPlaceholder: "Veuillez entrer les règles de réécriture",
     feedScraperRules: "Règles de scraping",
     feedScraperRulesPlaceholder: "Veuillez entrer les règles de scraping",
+    parsingErrorFallback: "Ce flux n'a pas pu être actualisé récemment",
     feedType: "Type",
     feed: "URL du flux ou du site",
     youtubeChannel: "Chaîne YouTube",

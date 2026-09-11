@@ -1,7 +1,7 @@
 import i18next from "i18next";
 import { toast } from "sonner";
 import minifluxAPI from "@/api/miniflux.js";
-import { forceSync } from "@/stores/syncStore.js";
+import { forceSyncWithWait } from "@/stores/syncStore.js";
 
 export const handleRefresh = (feedId) => {
   if (!feedId) return;
@@ -9,7 +9,7 @@ export const handleRefresh = (feedId) => {
   return toast.promise(
     (async () => {
       await minifluxAPI.refreshFeed(feedId);
-      await forceSync();
+      await forceSyncWithWait();
     })(),
     {
       loading: i18next.t("common.loading"),

@@ -66,6 +66,7 @@ export default {
     feedRewriteRulesPlaceholder: "Lütfen yeniden yazma kurallarını girin",
     feedScraperRules: "Kazıma kuralları",
     feedScraperRulesPlaceholder: "Lütfen kazıma kurallarını girin",
+    parsingErrorFallback: "Bu besleme yakın zamanda yenilenemedi",
     feedType: "Tür",
     feed: "Besleme veya site URL'si",
     youtubeChannel: "Youtube kanalı",

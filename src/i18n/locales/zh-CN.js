@@ -66,6 +66,7 @@ export default {
     feedRewriteRulesPlaceholder: "请输入重写规则",
     feedScraperRules: "采集规则",
     feedScraperRulesPlaceholder: "请输入采集规则",
+    parsingErrorFallback: "订阅源最近刷新失败",
     feedType: "类型",
     feed: "订阅源或网址",
     youtubeChannel: "Youtube 频道",
