@@ -28,6 +28,7 @@ import Attachments from "@/components/ArticleView/components/Attachments.jsx";
 import AISummary from "@/components/ArticleView/components/AISummary.jsx";
 import Iframe from "@/components/ArticleView/components/Iframe.jsx";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { getFontFamilyValue } from "@/lib/fontLoader";
 
 const ArticleView = () => {
   const { t } = useTranslation();
@@ -203,7 +204,7 @@ const ArticleView = () => {
                   className="article-view-content px-5 pt-5 pb-20 w-full mx-auto"
                   style={{
                     maxWidth: `${maxWidth}ch`,
-                    fontFamily: fontFamily,
+                    fontFamily: getFontFamilyValue(fontFamily),
                   }}
                 >
                   <header

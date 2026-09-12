@@ -23,7 +23,7 @@ import { Button, Separator, Dropdown, Header, Label } from "@heroui/react";
 import { resetSettings } from "@/stores/settingsStore.js";
 import { useTranslation } from "react-i18next";
 import SettingIcon from "@/components/ui/SettingIcon";
-import { loadFonts, FONT_CATEGORIES, SYSTEM_FONTS } from "@/lib/fontLoader";
+import { FONT_CATEGORIES, SYSTEM_FONTS } from "@/lib/fontLoader";
 import { updateSettings } from "@/stores/settingsStore.js";
 import { ChevronsUpDown } from "lucide-react";
 import { useState } from "react";
@@ -31,14 +31,6 @@ import { useState } from "react";
 // 字体选择器组件
 function FontSelector({ label, icon, settingName, settingValue }) {
   const [selected, setSelected] = useState(new Set([settingValue]));
-
-  // 打开时预加载所有字体
-  useEffect(() => {
-    const allFonts = Object.values(FONT_CATEGORIES).flatMap((cat) =>
-      cat.fonts.map((f) => f.value),
-    );
-    loadFonts(allFonts).catch(() => {});
-  }, []);
 
   // 同步选中状态
   useEffect(() => {
