@@ -138,6 +138,20 @@ export const initTranslationBlocks = (articleId, blocks, splitSource) => {
   }));
 };
 
+export const restoreTranslationCache = (articleId, blocks, splitSource) => {
+  updateArticleState(articleId, (prev) => ({
+    ...prev,
+    blocks: blocks.map((block) => ({
+      ...block,
+      status: "done",
+      error: null,
+    })),
+    splitSource,
+    translationStatus: "done",
+    translationError: null,
+  }));
+};
+
 export const setTranslationTranslating = (articleId) => {
   updateArticleState(articleId, (prev) => ({
     ...prev,

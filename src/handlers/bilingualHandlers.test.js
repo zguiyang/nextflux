@@ -36,9 +36,16 @@ const mockI18n = vi.hoisted(() => ({
   t: (key) => key,
 }));
 
+const cacheMocks = vi.hoisted(() => ({
+  getBilingualTranslationCache: vi.fn().mockResolvedValue(null),
+  saveBilingualTranslationCache: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock("@/i18n/index.js", () => ({
   default: mockI18n,
 }));
+
+vi.mock("@/db/storage.js", () => cacheMocks);
 
 describe("bilingualHandlers", () => {
   beforeEach(() => {
@@ -50,6 +57,10 @@ describe("bilingualHandlers", () => {
     vi.mocked(checkTranslationNeeded).mockReset();
     vi.mocked(toast.info).mockReset();
     vi.mocked(toast.error).mockReset();
+    cacheMocks.getBilingualTranslationCache.mockReset();
+    cacheMocks.getBilingualTranslationCache.mockResolvedValue(null);
+    cacheMocks.saveBilingualTranslationCache.mockReset();
+    cacheMocks.saveBilingualTranslationCache.mockResolvedValue(undefined);
     createBilingualSession();
   });
 
@@ -88,6 +99,40 @@ describe("bilingualHandlers", () => {
 
     expect(bilingualArticles.get()[1]?.active).toBe(true);
     expect(translateTextStream).toHaveBeenCalled();
+    expect(cacheMocks.saveBilingualTranslationCache).toHaveBeenCalled();
+  });
+
+  it("restores a completed translation from persistent cache", async () => {
+    const article = {
+      ...loadedArticle,
+      content:
+        "<p>这是相同的文章内容，并且已经有缓存翻译。</p>",
+    };
+    cacheMocks.getBilingualTranslationCache.mockImplementation(
+      async (_cacheKey, sourceHash) => ({
+        sourceHash,
+        splitSource: article.content,
+        blocks: [
+          {
+            id: "p-0",
+            html: article.content,
+            text: "这是相同的文章内容，并且已经有缓存翻译。",
+            skipTranslation: false,
+            translatedText: "这是一篇已经有缓存翻译的相同文章内容。",
+            status: "done",
+            error: null,
+          },
+        ],
+      }),
+    );
+
+    await startBilingualReading(article);
+
+    expect(translateTextStream).not.toHaveBeenCalled();
+    expect(bilingualArticles.get()[1]?.translationStatus).toBe("done");
+    expect(bilingualArticles.get()[1]?.blocks[0]?.translatedText).toBe(
+      "这是一篇已经有缓存翻译的相同文章内容。",
+    );
   });
 
   it("uses current article content when cached source status is error", async () => {
@@ -387,7 +432,7 @@ describe("bilingualHandlers", () => {
     createBilingualSession();
     await firstRun;
 
-    expect(bilingualArticles.get()[1].blocks[0]?.translatedText || "").not.toContain(
+    expect(bilingualArticles.get()[1]?.blocks?.[0]?.translatedText || "").not.toContain(
       "late chunk",
     );
   });

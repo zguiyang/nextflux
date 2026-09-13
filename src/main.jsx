@@ -13,9 +13,11 @@ import {
   CircleX,
   Loader2,
 } from "lucide-react";
+import { scheduleBilingualTranslationCacheCleanup } from "@/db/storage.js";
 
 // 初始化主题
 initTheme();
+scheduleBilingualTranslationCacheCleanup();
 
 createRoot(document.getElementById("root")).render(
   <>

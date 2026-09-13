@@ -12,6 +12,15 @@ db.version(11).stores({
   feedIcons: "feedId",
 });
 
+db.version(12).stores({
+  articles:
+    "id, feedId, status, starred, created_at, [status+feedId], [starred+feedId]",
+  categories: "id, title",
+  feeds: "id, url",
+  feedIcons: "feedId",
+  bilingualTranslations: "cacheKey, articleId, targetLanguage, lastAccessAt",
+});
+
 db.open().catch((err) => {
   console.error("打开数据库失败:", err);
   // 如果是版本升级错误，尝试删除数据库并重新创建
@@ -233,6 +242,112 @@ async function setFeedIcon(feedIcon) {
     updated_at: new Date().toISOString(),
   });
 }
+
+const BILINGUAL_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const BILINGUAL_CACHE_MAX_ENTRIES = 100;
+const BILINGUAL_CACHE_MAX_BYTES = 50 * 1024 * 1024;
+const BILINGUAL_CACHE_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const BILINGUAL_CACHE_CLEANUP_KEY = "bilingualTranslationCacheLastCleanup";
+let bilingualCacheMaintenancePromise = null;
+
+const estimateTranslationCacheSize = (entry) =>
+  JSON.stringify(entry.blocks || []).length * 2;
+
+export const getBilingualTranslationCache = async (cacheKey, sourceHash) => {
+  try {
+    const entry = await db.bilingualTranslations.get(cacheKey);
+
+    if (!entry || entry.sourceHash !== sourceHash) {
+      return null;
+    }
+
+    void db.bilingualTranslations
+      .update(cacheKey, { lastAccessAt: Date.now() })
+      .catch(() => {});
+
+    return entry;
+  } catch {
+    return null;
+  }
+};
+
+export const saveBilingualTranslationCache = async (entry) => {
+  try {
+    const now = Date.now();
+    const previous = await db.bilingualTranslations.get(entry.cacheKey);
+    const record = {
+      ...entry,
+      createdAt: previous?.createdAt || now,
+      updatedAt: now,
+      lastAccessAt: now,
+      sizeBytes: estimateTranslationCacheSize(entry),
+    };
+
+    await db.bilingualTranslations.put(record);
+    scheduleBilingualTranslationCacheMaintenance();
+  } catch {
+    // Cache failures must never affect the reading or translation flow.
+  }
+};
+
+const scheduleBilingualTranslationCacheMaintenance = () => {
+  if (bilingualCacheMaintenancePromise) return;
+
+  bilingualCacheMaintenancePromise = cleanupBilingualTranslationCache()
+    .catch(() => {})
+    .finally(() => {
+      bilingualCacheMaintenancePromise = null;
+    });
+};
+
+export const cleanupBilingualTranslationCache = async () => {
+  const cutoff = Date.now() - BILINGUAL_CACHE_TTL_MS;
+
+  await db.bilingualTranslations.where("lastAccessAt").below(cutoff).delete();
+
+  const entries = await db.bilingualTranslations
+    .orderBy("lastAccessAt")
+    .toArray();
+  let totalBytes = entries.reduce(
+    (total, entry) => total + (entry.sizeBytes || estimateTranslationCacheSize(entry)),
+    0,
+  );
+
+  while (
+    entries.length > BILINGUAL_CACHE_MAX_ENTRIES ||
+    totalBytes > BILINGUAL_CACHE_MAX_BYTES
+  ) {
+    const oldest = entries.shift();
+    if (!oldest) break;
+    totalBytes -= oldest.sizeBytes || estimateTranslationCacheSize(oldest);
+    await db.bilingualTranslations.delete(oldest.cacheKey);
+  }
+};
+
+export const scheduleBilingualTranslationCacheCleanup = () => {
+  const runCleanup = () => {
+    const now = Date.now();
+    const lastCleanup = Number(
+      localStorage.getItem(BILINGUAL_CACHE_CLEANUP_KEY) || 0,
+    );
+
+    if (now - lastCleanup < BILINGUAL_CACHE_CLEANUP_INTERVAL_MS) {
+      return;
+    }
+
+    void cleanupBilingualTranslationCache()
+      .then(() => {
+        localStorage.setItem(BILINGUAL_CACHE_CLEANUP_KEY, String(now));
+      })
+      .catch(() => {});
+  };
+
+  if (typeof requestIdleCallback === "function") {
+    requestIdleCallback(runCleanup, { timeout: 5000 });
+  } else {
+    setTimeout(runCleanup, 1000);
+  }
+};
 
 export {
   addFeeds,

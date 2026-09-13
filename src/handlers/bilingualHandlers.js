@@ -12,7 +12,13 @@ import {
   runTranslationPrecheck,
 } from "@/lib/bilingualTranslationGate.js";
 import { splitHtmlIntoBlocks } from "@/lib/articleContentBlocks.js";
+import { createBilingualTranslationCacheIdentity } from "@/lib/bilingualCache.js";
 import { loadingOriginContent } from "@/stores/articlesStore.js";
+import { getAICapability } from "@/stores/settingsStore.js";
+import {
+  getBilingualTranslationCache,
+  saveBilingualTranslationCache,
+} from "@/db/storage.js";
 import {
   appendBlockTranslation,
   createBilingualSession,
@@ -28,6 +34,7 @@ import {
   setOriginalLoaded,
   setTranslationDone,
   resetFailedBlocks,
+  restoreTranslationCache,
   setTranslationTranslating,
   bilingualArticles,
 } from "@/stores/bilingualStore.js";
@@ -311,6 +318,33 @@ const startTranslationForArticle = async (
   );
 };
 
+const getTranslationCacheIdentity = (articleId, sourceContent, locale) =>
+  createBilingualTranslationCacheIdentity({
+    articleId,
+    sourceContent,
+    targetLanguage: locale,
+    capability: getAICapability("translation"),
+  });
+
+const saveCompletedTranslation = async (
+  articleId,
+  cacheIdentity,
+  targetLanguage,
+) => {
+  const state = bilingualArticles.get()[articleId];
+  if (!hasCompletedTranslation(state)) return;
+
+  await saveBilingualTranslationCache({
+    cacheKey: cacheIdentity.cacheKey,
+    articleId,
+    targetLanguage,
+    sourceHash: cacheIdentity.sourceHash,
+    configHash: cacheIdentity.configHash,
+    splitSource: state.splitSource,
+    blocks: state.blocks,
+  });
+};
+
 const syncOriginalContent = (article, articleId) => {
   const state = bilingualArticles.get()[articleId];
   const resolved = resolveSourceContent(article, state);
@@ -352,6 +386,39 @@ export const startBilingualReading = async (article) => {
   }
 
   const { sessionId, abortController } = beginBilingualSession();
+
+  const cacheIdentity = await getTranslationCacheIdentity(
+    articleId,
+    resolved.content,
+    locale,
+  );
+
+  if (!isSessionActive(sessionId) || abortController.signal.aborted) {
+    return;
+  }
+
+  const cachedTranslation = await getBilingualTranslationCache(
+    cacheIdentity.cacheKey,
+    cacheIdentity.sourceHash,
+  );
+
+  if (!isSessionActive(sessionId) || abortController.signal.aborted) {
+    return;
+  }
+
+  if (
+    cachedTranslation?.blocks?.length > 0 &&
+    cachedTranslation.splitSource === resolved.content
+  ) {
+    initBilingualArticle(articleId);
+    syncOriginalContent(article, articleId);
+    restoreTranslationCache(
+      articleId,
+      cachedTranslation.blocks,
+      cachedTranslation.splitSource,
+    );
+    return;
+  }
 
   if (decision.status === LANGUAGE_DECISION.UNCERTAIN) {
     const precheckResult = await runTranslationPrecheck(
@@ -402,6 +469,10 @@ export const startBilingualReading = async (article) => {
     locale,
     abortController.signal,
   );
+
+  if (isSessionActive(sessionId) && !abortController.signal.aborted) {
+    await saveCompletedTranslation(articleId, cacheIdentity, locale);
+  }
 };
 
 export const stopBilingualReading = (articleId) => {
@@ -433,6 +504,15 @@ export const retryBilingualOriginal = async (article) => {
     getAppLocale(),
     abortController.signal,
   );
+
+  if (isSessionActive(sessionId) && !abortController.signal.aborted) {
+    const identity = await getTranslationCacheIdentity(
+      articleId,
+      originalContent,
+      getAppLocale(),
+    );
+    await saveCompletedTranslation(articleId, identity, getAppLocale());
+  }
 };
 
 export const retryBilingualTranslation = async (article) => {
@@ -446,12 +526,10 @@ export const retryBilingualTranslation = async (article) => {
   const articleId = article.id;
   initBilingualArticle(articleId);
 
-  const state = bilingualArticles.get()[articleId];
-  if (state?.originalStatus !== "loaded" || !state.originalContent) {
-    const originalContent = syncOriginalContent(article, articleId);
-    if (!originalContent) {
-      return;
-    }
+  let originalContent = bilingualArticles.get()[articleId]?.originalContent;
+  if (!originalContent) {
+    originalContent = syncOriginalContent(article, articleId);
+    if (!originalContent) return;
   }
 
   resetFailedBlocks(articleId);
@@ -461,6 +539,15 @@ export const retryBilingualTranslation = async (article) => {
     getAppLocale(),
     abortController.signal,
   );
+
+  if (isSessionActive(sessionId) && !abortController.signal.aborted) {
+    const identity = await getTranslationCacheIdentity(
+      articleId,
+      originalContent,
+      getAppLocale(),
+    );
+    await saveCompletedTranslation(articleId, identity, getAppLocale());
+  }
 };
 
 export const toggleBilingualReading = async (article) => {
