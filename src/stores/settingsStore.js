@@ -63,7 +63,7 @@ const defaultValue = {
   showLineNumbers: false,
   forceDarkCodeTheme: false,
   defaultExpandCategory: false, // 默认展开分类
-  showUnreadByDefault: false,
+  showUnreadByDefault: true,
   reduceMotion: false,
   borderRadius: 0.4, // 0-0.5rem
   interfaceFontSize: "16",
