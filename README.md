@@ -38,7 +38,10 @@ The following completed changes are specific to this fork compared with the orig
 | ✅ | Feed reliability | More reliable manual refresh | Waits for the server refresh and the following local synchronization, so success and error notifications reflect the actual result. |
 | ✅ | Reading performance | On-demand reading fonts | Avoids network requests for system fonts and loads selected web fonts only when they are needed. |
 | ✅ | PWA | Improved installation support | Provides a complete web app manifest and standalone display configuration without requiring offline caching or a service worker. |
-| ✅ | AI | Improved OpenAI-compatible provider setup | Adds model discovery through `/models`, a model selector, manual model fallback, and an independent connection test for the existing article AI summary feature. |
+| ✅ | AI | Capability-based AI configuration | Separates providers, models, prompts, and capabilities, then lets each AI capability bind its own model and prompt. Also adds model discovery through `/models`, manual model fallback, and an independent connection test for the existing article AI summary feature. |
+| ✅ | Reading | Bilingual reading mode | Adds on-demand bilingual reading with locale-aware target languages, content filtering, language matching checks, streamed translation, and a simple toggle in the article toolbar. |
+| ✅ | Reading | Persistent bilingual translation cache | Reuses completed translations across sessions through local browser storage, with source/config-aware cache keys and background maintenance for expiry and size limits. |
+| ✅ | Article list | Flexible article sorting | Adds temporary list sorting controls for publication or creation time in ascending or descending order, alongside a unified default sorting setting. |
 | ✅ | Deployment | Fork-specific Cloudflare Pages guidance | Documents the recommended global static deployment workflow and the browser-side connectivity requirements for Miniflux and AI providers. |
 
 ## Requirements
