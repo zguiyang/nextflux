@@ -27,12 +27,19 @@ This repository follows [electh/nextflux](https://github.com/electh/nextflux) an
 - Light and dark themes with additional appearance controls
 - English, Chinese, Turkish, and French translations
 
-### Community fork improvements
+## Fork additions
 
-- **Visible feed parsing errors**: feeds with parsing failures display a warning indicator in the sidebar. Hover or select the indicator to see the server-provided or fallback error message.
-- **More reliable manual refresh**: refreshing a feed now waits for the server refresh and the following local synchronization. Success and error notifications reflect the actual result of both operations.
-- **Further optimized on-demand reading fonts**: system fonts require no network request, while selected web fonts are loaded only when needed. This reduces unnecessary font downloads during initial page load.
-- **Improved PWA installation**: the app includes a complete web app manifest and can be installed as a standalone desktop web app in supported browsers. Offline caching and a service worker are intentionally not required.
+The following completed changes are specific to this fork compared with the original [electh/nextflux](https://github.com/electh/nextflux) project:
+
+| Status | Area | Fork addition | Description |
+| --- | --- | --- | --- |
+| ✅ | Navigation | Global Starred Articles view | Adds a dedicated **Starred Articles** entry in the sidebar for viewing starred articles across feeds. |
+| ✅ | Feed reliability | Visible feed parsing errors | Shows a warning indicator for feeds with parsing failures, including the server-provided or fallback error message. |
+| ✅ | Feed reliability | More reliable manual refresh | Waits for the server refresh and the following local synchronization, so success and error notifications reflect the actual result. |
+| ✅ | Reading performance | On-demand reading fonts | Avoids network requests for system fonts and loads selected web fonts only when they are needed. |
+| ✅ | PWA | Improved installation support | Provides a complete web app manifest and standalone display configuration without requiring offline caching or a service worker. |
+| ✅ | AI | Improved OpenAI-compatible provider setup | Adds model discovery through `/models`, a model selector, manual model fallback, and an independent connection test for the existing article AI summary feature. |
+| ✅ | Deployment | Fork-specific Cloudflare Pages guidance | Documents the recommended global static deployment workflow and the browser-side connectivity requirements for Miniflux and AI providers. |
 
 ## Requirements
 

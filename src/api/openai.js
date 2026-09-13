@@ -1,5 +1,73 @@
 import { settingsState } from "@/stores/settingsStore.js";
 
+const normalizeBaseUrl = (baseUrl) => baseUrl.trim().replace(/\/+$/, "");
+
+const getAPIError = async (response) => {
+  const error = await response.json().catch(() => ({}));
+  return new Error(
+    error?.error?.message ||
+      error?.message ||
+      `API error: ${response.status}`,
+  );
+};
+
+const getAIRequestOptions = (apiKey) => ({
+  headers: {
+    Accept: "application/json",
+    Authorization: `Bearer ${apiKey}`,
+  },
+});
+
+export const fetchAIModels = async ({ apiKey, baseUrl }) => {
+  if (!apiKey) throw new Error("AI API Key not configured");
+  if (!baseUrl) throw new Error("AI Base URL not configured");
+
+  const response = await fetch(
+    `${normalizeBaseUrl(baseUrl)}/models`,
+    getAIRequestOptions(apiKey),
+  );
+  if (!response.ok) throw await getAPIError(response);
+
+  const payload = await response.json();
+  const models = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+      ? payload.data
+      : [];
+
+  return [
+    ...new Set(
+      models
+        .map((model) => (typeof model === "string" ? model : model?.id))
+        .filter(Boolean),
+    ),
+  ].sort((a, b) => a.localeCompare(b));
+};
+
+export const testAIConnection = async ({ apiKey, baseUrl, model }) => {
+  if (!apiKey) throw new Error("AI API Key not configured");
+  if (!baseUrl) throw new Error("AI Base URL not configured");
+  if (!model?.trim()) throw new Error("AI model not configured");
+
+  const response = await fetch(
+    `${normalizeBaseUrl(baseUrl)}/chat/completions`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: model.trim(),
+        messages: [{ role: "user", content: "hi" }],
+        max_tokens: 1,
+      }),
+    },
+  );
+  if (!response.ok) throw await getAPIError(response);
+};
+
 const getPlainText = (html) => {
   try {
     const doc = new DOMParser().parseFromString(html, "text/html");
@@ -69,10 +137,14 @@ export const summarizeArticleStream = async (article, { onChunk, onDone, onError
     onError(new Error("AI API Key not configured"));
     return;
   }
+  if (!aiModel?.trim()) {
+    onError(new Error("AI model not configured"));
+    return;
+  }
 
   const plainText = getPlainText(article.content || "");
   const title = article.title || "";
-  const baseUrl = aiBaseUrl.replace(/\/$/, "");
+  const baseUrl = normalizeBaseUrl(aiBaseUrl);
 
   let response;
   try {
@@ -83,7 +155,7 @@ export const summarizeArticleStream = async (article, { onChunk, onDone, onError
         Authorization: `Bearer ${aiApiKey}`,
       },
       body: JSON.stringify({
-        model: aiModel,
+        model: aiModel.trim(),
         stream: true,
         messages: [
           {
@@ -105,8 +177,7 @@ export const summarizeArticleStream = async (article, { onChunk, onDone, onError
   }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    onError(new Error(error?.error?.message || `API error: ${response.status}`));
+    onError(await getAPIError(response));
     return;
   }
 
