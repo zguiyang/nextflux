@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
-import { checkTranslationNeeded, translateTextStream } from "@/api/openai.js";
+import { checkTranslationNeeded, translateTextStream } from "@/api/ai.js";
 import { loadingOriginContent } from "@/stores/articlesStore.js";
 import {
   bilingualArticles,
@@ -18,7 +18,7 @@ import {
   toggleBilingualReading,
 } from "./bilingualHandlers.js";
 
-vi.mock("@/api/openai.js", () => ({
+vi.mock("@/api/ai.js", () => ({
   translateTextStream: vi.fn(),
   checkTranslationNeeded: vi.fn(),
 }));

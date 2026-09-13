@@ -1,4 +1,4 @@
-import { translateTextStream } from "@/api/openai.js";
+import { translateTextStream } from "@/api/ai.js";
 import i18n from "@/i18n/index.js";
 import { toast } from "sonner";
 import {

@@ -38,7 +38,7 @@ The following completed changes are specific to this fork compared with the orig
 | ✅ | Feed reliability | More reliable manual refresh | Waits for the server refresh and the following local synchronization, so success and error notifications reflect the actual result. |
 | ✅ | Reading performance | On-demand reading fonts | Avoids network requests for system fonts and loads selected web fonts only when they are needed. |
 | ✅ | PWA | Improved installation support | Provides a complete web app manifest and standalone display configuration without requiring offline caching or a service worker. |
-| ✅ | AI | Capability-based AI configuration | Separates providers, models, prompts, and capabilities, then lets each AI capability bind its own model and prompt. Also adds model discovery through `/models`, manual model fallback, and an independent connection test for the existing article AI summary feature. |
+| ✅ | AI | Capability-based AI configuration | Separates providers, models, prompts, and capabilities, then lets each AI capability bind its own model and prompt. AI generation now uses the Vercel AI SDK with configurable OpenAI Chat/Responses providers, schema-validated translation prechecks, and SDK-managed streaming; model discovery through `/models` remains a provider compatibility endpoint. |
 | ✅ | Reading | Bilingual reading mode | Adds on-demand bilingual reading with locale-aware target languages, content filtering, language matching checks, streamed translation, and a simple toggle in the article toolbar. |
 | ✅ | Reading | Persistent bilingual translation cache | Reuses completed translations across sessions through local browser storage, with source/config-aware cache keys and background maintenance for expiry and size limits. |
 | ✅ | Article list | Flexible article sorting | Adds temporary list sorting controls for publication or creation time in ascending or descending order, alongside a unified default sorting setting. |
@@ -187,3 +187,9 @@ Thanks to the original Nextflux project and its contributors, including:
 - French translation: [@quent1-fr](https://github.com/quent1-fr)
 
 Nextflux also builds on the Miniflux API and the open-source React ecosystem.
+
+### AI integration
+
+AI generation is centralized in [`src/api/ai.js`](./src/api/ai.js). It uses AI SDK Core with a per-provider `@ai-sdk/openai` instance, so Chat Completions and Responses share the same `generateText`/`streamText` surface while existing OpenAI-compatible Base URLs remain supported. Translation prechecks use AI SDK structured output with a compatibility fallback for older endpoints that do not support JSON Schema.
+
+The app is intentionally a static browser client: provider credentials are entered by the user and retained in local browser settings, then sent directly to the configured AI endpoint. Future server-side tools, approvals, or secret-backed integrations should be added behind an application API route; the AI SDK provider seam is already isolated for that extension.

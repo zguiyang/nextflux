@@ -37,7 +37,7 @@ import {
   setSummaryDone,
   setSummaryError,
 } from "@/stores/aiStore.js";
-import { summarizeArticleStream } from "@/api/openai.js";
+import { summarizeArticleStream } from "@/api/ai.js";
 import { toggleBilingualReading } from "@/handlers/bilingualHandlers.js";
 import { bilingualArticles } from "@/stores/bilingualStore.js";
 
@@ -115,7 +115,6 @@ export default function ActionButtons() {
     if (!$activeArticle) return;
     const articleId = $activeArticle.id;
     if (currentSummaryState?.loading) return;
-    console.log("[Nextflux AI] summary button pressed", { articleId });
     setSummaryLoading(articleId);
 
     let rafId = null;
@@ -135,27 +134,16 @@ export default function ActionButtons() {
         if (!rafId) rafId = requestAnimationFrame(flush);
       },
       onDone: () => {
-        console.log("[Nextflux AI] summary done", { articleId });
         if (rafId) cancelAnimationFrame(rafId);
         flush();
         setSummaryDone(articleId);
       },
       onError: (error) => {
-        console.warn("[Nextflux AI] summary callback error", {
-          articleId,
-          name: error?.name,
-          message: error?.message || String(error),
-        });
         if (rafId) cancelAnimationFrame(rafId);
         setSummaryError(articleId, error.message);
         toast.error(error.message);
       },
     }).catch((error) => {
-      console.warn("[Nextflux AI] summary promise error", {
-        articleId,
-        name: error?.name,
-        message: error?.message || String(error),
-      });
       if (rafId) cancelAnimationFrame(rafId);
       setSummaryError(articleId, error.message);
       toast.error(error.message);

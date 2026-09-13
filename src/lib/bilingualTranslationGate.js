@@ -1,4 +1,4 @@
-import { checkTranslationNeeded } from "@/api/openai.js";
+import { checkTranslationNeeded } from "@/api/ai.js";
 import {
   extractTranslatableSample,
   LANGUAGE_DECISION,
