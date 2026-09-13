@@ -385,5 +385,5 @@ export const isSameLanguageAsTarget = (text, locale, options = {}) => {
 export const estimateTranslationMaxTokens = (text) => {
   const length = text?.length || 0;
   const estimated = Math.ceil(length * 1.4) + 64;
-  return Math.min(2000, Math.max(128, estimated));
+  return Math.min(8192, Math.max(2048, estimated));
 };

@@ -106,7 +106,8 @@ describe("bilingualLanguage", () => {
   });
 
   it("estimates max tokens from input length with a safe cap", () => {
-    expect(estimateTranslationMaxTokens("short")).toBe(128);
-    expect(estimateTranslationMaxTokens("x".repeat(2000))).toBe(2000);
+    expect(estimateTranslationMaxTokens("short")).toBe(2048);
+    expect(estimateTranslationMaxTokens("x".repeat(2000))).toBe(2864);
+    expect(estimateTranslationMaxTokens("x".repeat(10000))).toBe(8192);
   });
 });
