@@ -357,6 +357,8 @@ export default {
       model: "Model",
       selectModel: "Select model",
       maxOutputTokens: "Max output tokens",
+      reasoningMode: "Reasoning mode",
+      reasoningModeHint: "Turn off for faster responses",
       modelUnset: "Not set",
       prompt: "Prompt",
       testCapability: "Test this setup",

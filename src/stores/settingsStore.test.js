@@ -29,6 +29,7 @@ describe("AI settings", () => {
     expect(settings.aiCapabilities.summary).toEqual({
       modelId: "default",
       promptId: "summary-default",
+      enableReasoning: false,
     });
   });
 
@@ -71,6 +72,7 @@ describe("AI settings", () => {
     expect(settings.aiCapabilities.summary).toEqual({
       modelId: "default",
       promptId: "summary-default",
+      enableReasoning: false,
     });
   });
 
@@ -186,6 +188,7 @@ describe("AI settings", () => {
     expect(settings.aiCapabilities.translation).toEqual({
       modelId: "translation",
       promptId: "translation-default",
+      enableReasoning: false,
     });
     expect(
       settings.aiPrompts.find((item) => item.capability === "translation"),

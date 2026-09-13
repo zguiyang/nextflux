@@ -359,6 +359,8 @@ export default {
       model: "Modèle",
       selectModel: "Sélectionner un modèle",
       maxOutputTokens: "Nombre maximal de tokens de sortie",
+      reasoningMode: "Mode raisonnement",
+      reasoningModeHint: "Désactivez-le pour répondre plus vite",
       modelUnset: "Non défini",
       prompt: "Prompt",
       testCapability: "Tester cette configuration",

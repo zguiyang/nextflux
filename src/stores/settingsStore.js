@@ -2,6 +2,7 @@ import { persistentAtom } from "@nanostores/persistent";
 
 export const DEFAULT_MODEL_MAX_OUTPUT_TOKENS = 2048;
 export const MIN_MODEL_MAX_OUTPUT_TOKENS = 16;
+export const DEFAULT_ENABLE_REASONING = false;
 
 const defaultAIProvider = {
   id: "default",
@@ -82,10 +83,12 @@ const defaultValue = {
     summary: {
       modelId: defaultAIModel.id,
       promptId: defaultAISummaryPrompt.id,
+      enableReasoning: DEFAULT_ENABLE_REASONING,
     },
     translation: {
       modelId: defaultAITranslationModel.id,
       promptId: defaultAITranslationPrompt.id,
+      enableReasoning: DEFAULT_ENABLE_REASONING,
     },
   },
 };
@@ -112,6 +115,11 @@ const normalizeAIModel = (model) => ({
     model.maxOutputTokens,
     DEFAULT_MODEL_MAX_OUTPUT_TOKENS,
   ),
+});
+
+const normalizeAICapability = (capability) => ({
+  ...capability,
+  enableReasoning: capability.enableReasoning === true,
 });
 
 const migrateFromMixedModels = (storedValue) => {
@@ -209,12 +217,19 @@ const ensureTranslationCapability = (settings) => {
     };
   }
 
+  const normalizedCapabilities = Object.fromEntries(
+    Object.entries(capabilities).map(([name, capability]) => [
+      name,
+      normalizeAICapability(capability || {}),
+    ]),
+  );
+
   return {
     ...settings,
     aiProviders: (settings.aiProviders || []).map(normalizeAIProvider),
     aiPrompts: prompts,
     aiModels: models.map(normalizeAIModel),
-    aiCapabilities: capabilities,
+    aiCapabilities: normalizedCapabilities,
   };
 };
 
@@ -282,8 +297,14 @@ export const resolveAICapability = (settings, capability) => {
   return { provider, model, prompt };
 };
 
-export const getAICapability = (capability) =>
-  resolveAICapability(settingsState.get(), capability);
+export const getAICapability = (capability) => {
+  const settings = settingsState.get();
+  return {
+    ...resolveAICapability(settings, capability),
+    enableReasoning:
+      settings.aiCapabilities?.[capability]?.enableReasoning === true,
+  };
+};
 
 export const resetSettings = () => {
   // 定义阅读相关的设置项

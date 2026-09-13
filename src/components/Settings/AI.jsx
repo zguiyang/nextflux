@@ -19,7 +19,7 @@ import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ItemWrapper } from "@/components/ui/settingItem.jsx";
-import { testAIConnection } from "@/api/openai.js";
+import { testAIConnection } from "@/api/ai.js";
 import {
   SUMMARY_CAPABILITY,
   TRANSLATION_CAPABILITY,
@@ -61,6 +61,9 @@ export default function AI() {
     summaryCard.maxOutputTokens,
   );
   const [summaryPrompt, setSummaryPrompt] = useState(summaryCard.promptContent);
+  const [summaryEnableReasoning, setSummaryEnableReasoning] = useState(
+    summaryCard.enableReasoning,
+  );
   const [translationModelId, setTranslationModelId] = useState(
     translationCard.modelId,
   );
@@ -69,6 +72,9 @@ export default function AI() {
   );
   const [translationPrompt, setTranslationPrompt] = useState(
     translationCard.promptContent,
+  );
+  const [translationEnableReasoning, setTranslationEnableReasoning] = useState(
+    translationCard.enableReasoning,
   );
   const [summaryOpen, setSummaryOpen] = useState(true);
   const [translationOpen, setTranslationOpen] = useState(false);
@@ -97,13 +103,14 @@ export default function AI() {
     }
   };
 
-  const handleTestCapability = async (modelId, setTesting) => {
+  const handleTestCapability = async (modelId, enableReasoning, setTesting) => {
     setTesting(true);
     try {
       await testAIConnection({
         ...getUnsavedProviderCredentials(localApiKey, localBaseUrl),
         model: modelId,
         apiProtocol: localApiProtocol,
+        enableReasoning,
       });
       toast.success(t("settings.ai.testSuccess"));
     } catch (error) {
@@ -134,11 +141,13 @@ export default function AI() {
               modelId: summaryModelId,
               maxOutputTokens: summaryMaxOutputTokens,
               promptContent: summaryPrompt,
+              enableReasoning: summaryEnableReasoning,
             },
             [TRANSLATION_CAPABILITY]: {
               modelId: translationModelId,
               maxOutputTokens: translationMaxOutputTokens,
               promptContent: translationPrompt,
+              enableReasoning: translationEnableReasoning,
             },
           },
         }),
@@ -241,11 +250,17 @@ export default function AI() {
             }
             maxOutputTokens={summaryMaxOutputTokens}
             onMaxOutputTokensChange={setSummaryMaxOutputTokens}
+            enableReasoning={summaryEnableReasoning}
+            onEnableReasoningChange={setSummaryEnableReasoning}
             prompt={summaryPrompt}
             onPromptChange={setSummaryPrompt}
             availableModels={availableModels}
             onTest={() =>
-              handleTestCapability(summaryModelId, setTestingSummary)
+              handleTestCapability(
+                summaryModelId,
+                summaryEnableReasoning,
+                setTestingSummary,
+              )
             }
             testing={testingSummary}
           />
@@ -264,11 +279,17 @@ export default function AI() {
             }
             maxOutputTokens={translationMaxOutputTokens}
             onMaxOutputTokensChange={setTranslationMaxOutputTokens}
+            enableReasoning={translationEnableReasoning}
+            onEnableReasoningChange={setTranslationEnableReasoning}
             prompt={translationPrompt}
             onPromptChange={setTranslationPrompt}
             availableModels={availableModels}
             onTest={() =>
-              handleTestCapability(translationModelId, setTestingTranslation)
+              handleTestCapability(
+                translationModelId,
+                translationEnableReasoning,
+                setTestingTranslation,
+              )
             }
             testing={testingTranslation}
           />

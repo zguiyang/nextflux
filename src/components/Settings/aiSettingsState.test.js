@@ -10,10 +10,10 @@ import {
   getSummaryBoundSelections,
   getUnsavedProviderCredentials,
 } from "./aiSettingsState.js";
-import { fetchAIModels } from "@/api/openai.js";
+import { fetchAIModels } from "@/api/ai.js";
 import { resolveAICapability } from "@/stores/settingsStore.js";
 
-vi.mock("@/api/openai.js", () => ({
+vi.mock("@/api/ai.js", () => ({
   fetchAIModels: vi.fn(),
 }));
 
@@ -53,8 +53,16 @@ describe("AI settings editor state", () => {
       },
     ],
     aiCapabilities: {
-      summary: { modelId: "default", promptId: "summary-default" },
-      translation: { modelId: "translation", promptId: "translation-default" },
+      summary: {
+        modelId: "default",
+        promptId: "summary-default",
+        enableReasoning: false,
+      },
+      translation: {
+        modelId: "translation",
+        promptId: "translation-default",
+        enableReasoning: false,
+      },
     },
   };
 
@@ -159,6 +167,7 @@ describe("AI settings editor state", () => {
           modelId: "gpt-4o",
           maxOutputTokens: 4096,
           promptContent: "New prompt content",
+          enableReasoning: true,
         },
       },
     });
@@ -187,6 +196,7 @@ describe("AI settings editor state", () => {
       modelId: "gpt-4o",
       maxOutputTokens: 4096,
       promptContent: "New prompt content",
+      enableReasoning: true,
     });
   });
 
@@ -223,6 +233,7 @@ describe("AI settings editor state", () => {
           modelId: "gpt-4.1",
           maxOutputTokens: 3072,
           promptContent: "用户自定义提示词，保持原样",
+          enableReasoning: false,
         },
       },
     });
@@ -245,6 +256,7 @@ describe("AI settings editor state", () => {
       modelId: "gpt-4.1",
       maxOutputTokens: 3072,
       promptContent: "用户自定义提示词，保持原样",
+      enableReasoning: false,
     });
   });
 });

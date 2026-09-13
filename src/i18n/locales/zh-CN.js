@@ -352,6 +352,8 @@ export default {
       model: "模型",
       selectModel: "选择模型",
       maxOutputTokens: "单次最大输出 Token",
+      reasoningMode: "思考模式",
+      reasoningModeHint: "关闭可提升响应速度",
       modelUnset: "未设置",
       prompt: "提示词",
       testCapability: "测试当前配置",

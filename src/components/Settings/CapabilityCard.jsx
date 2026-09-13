@@ -6,6 +6,7 @@ import {
   Select,
   Separator,
   Spinner,
+  Switch,
   TextArea,
   TextField,
 } from "@heroui/react";
@@ -27,6 +28,8 @@ export default function CapabilityCard({
   onModelSelect,
   maxOutputTokens,
   onMaxOutputTokensChange,
+  enableReasoning,
+  onEnableReasoningChange,
   prompt,
   onPromptChange,
   availableModels,
@@ -101,6 +104,28 @@ export default function CapabilityCard({
                   placeholder="gpt-4o-mini"
                 />
               </TextField>
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between gap-3 p-2.5">
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="text-sm font-medium text-foreground">
+                  {t("settings.ai.reasoningMode")}
+                </span>
+                <span className="text-xs leading-4 text-muted">
+                  {t("settings.ai.reasoningModeHint")}
+                </span>
+              </div>
+              <Switch
+                size="lg"
+                className="shrink-0"
+                isSelected={enableReasoning}
+                onChange={onEnableReasoningChange}
+                aria-label={t("settings.ai.reasoningMode")}
+              >
+                <Switch.Control className="rounded-full">
+                  <Switch.Thumb className="rounded-full" />
+                </Switch.Control>
+              </Switch>
             </div>
             <Separator />
             <div className="p-2.5">

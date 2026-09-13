@@ -1,4 +1,4 @@
-import { fetchAIModels } from "@/api/openai.js";
+import { fetchAIModels } from "@/api/ai.js";
 import {
   DEFAULT_MODEL_MAX_OUTPUT_TOKENS,
   MIN_MODEL_MAX_OUTPUT_TOKENS,
@@ -43,6 +43,8 @@ export function getCapabilityCardState(settings, capability) {
     modelId: model?.modelId || "",
     maxOutputTokens: model?.maxOutputTokens || DEFAULT_MODEL_MAX_OUTPUT_TOKENS,
     promptContent: prompt?.content || "",
+    enableReasoning:
+      settings.aiCapabilities?.[capability]?.enableReasoning === true,
   };
 }
 
@@ -77,6 +79,16 @@ export function buildCapabilitySaveUpdates(
   );
 
   const capabilityUpdates = capabilities || {};
+  const updatedCapabilities = { ...(settings.aiCapabilities || {}) };
+
+  for (const [capability, card] of Object.entries(capabilityUpdates)) {
+    if (card?.enableReasoning !== undefined) {
+      updatedCapabilities[capability] = {
+        ...(updatedCapabilities[capability] || {}),
+        enableReasoning: card.enableReasoning === true,
+      };
+    }
+  }
 
   const updatedModels = (settings.aiModels || []).map((model) => {
     for (const [capability, card] of Object.entries(capabilityUpdates)) {
@@ -117,6 +129,7 @@ export function buildCapabilitySaveUpdates(
     aiProviders: updatedProviders,
     aiModels: updatedModels,
     aiPrompts: updatedPrompts,
+    aiCapabilities: updatedCapabilities,
   };
 }
 

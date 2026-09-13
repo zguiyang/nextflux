@@ -355,6 +355,8 @@ export default {
       model: "Model",
       selectModel: "Model seç",
       maxOutputTokens: "Maksimum çıktı tokenı",
+      reasoningMode: "Akıl yürütme modu",
+      reasoningModeHint: "Daha hızlı yanıt için kapatın",
       modelUnset: "Ayarlanmadı",
       prompt: "Prompt",
       testCapability: "Bu ayarı test et",
