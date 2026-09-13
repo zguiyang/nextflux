@@ -283,11 +283,7 @@ export default function ActionButtons() {
                 variant="ghost"
                 isIconOnly
                 size="sm"
-                isPending={
-                  fetchLoading ||
-                  (bilingualState?.active &&
-                    bilingualState.translationStatus === "translating")
-                }
+                isPending={fetchLoading}
               >
                 {fetchLoading ||
                 (bilingualState?.active &&

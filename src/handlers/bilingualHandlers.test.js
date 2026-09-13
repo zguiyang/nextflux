@@ -71,22 +71,32 @@ describe("bilingualHandlers", () => {
     shownOriginal: true,
   };
 
-  it("shows toast and stays inactive when original text is not loaded", async () => {
+  it("translates current article content without requiring original mode", async () => {
+    vi.mocked(translateTextStream).mockImplementation(
+      async (_text, { onDone }) => {
+        onDone();
+      },
+    );
+
     await startBilingualReading({
       id: 1,
       title: "Hello",
-      content: "<p>rss summary</p>",
+      content:
+        "<p>这是当前文章中已经存在的内容，即使没有切换到原文模式也应该直接进入双语翻译流程。</p>",
       shownOriginal: false,
     });
 
-    expect(bilingualArticles.get()[1]).toBeUndefined();
-    expect(toast.info).toHaveBeenCalledWith(
-      "articleView.bilingualLoadOriginalFirst",
-    );
-    expect(translateTextStream).not.toHaveBeenCalled();
+    expect(bilingualArticles.get()[1]?.active).toBe(true);
+    expect(translateTextStream).toHaveBeenCalled();
   });
 
-  it("shows toast and stays inactive when cached original status is error", async () => {
+  it("uses current article content when cached source status is error", async () => {
+    vi.mocked(translateTextStream).mockImplementation(
+      async (_text, { onDone }) => {
+        onDone();
+      },
+    );
+
     bilingualArticles.set({
       1: {
         active: false,
@@ -104,30 +114,45 @@ describe("bilingualHandlers", () => {
     await startBilingualReading({
       id: 1,
       title: "Hello",
-      content: "<p>rss summary</p>",
+      content:
+        "<p>这是当前文章中已经存在的内容，即使缓存原文失败也应该使用当前内容翻译。</p>",
       shownOriginal: false,
     });
 
-    expect(bilingualArticles.get()[1]?.active).toBe(false);
-    expect(toast.info).toHaveBeenCalledWith(
-      "articleView.bilingualLoadOriginalFirst",
-    );
-    expect(translateTextStream).not.toHaveBeenCalled();
+    expect(bilingualArticles.get()[1]?.active).toBe(true);
+    expect(translateTextStream).toHaveBeenCalled();
   });
 
-  it("toggleBilingualReading shows toast and stays inactive without original", async () => {
+  it("toggleBilingualReading translates current content without original mode", async () => {
+    vi.mocked(translateTextStream).mockImplementation(
+      async (_text, { onDone }) => {
+        onDone();
+      },
+    );
+
     await toggleBilingualReading({
       id: 1,
       title: "Hello",
-      content: "<p>rss summary</p>",
+      content:
+        "<p>这是当前文章中已经存在的内容，双语按钮应该直接使用它开始翻译。</p>",
       shownOriginal: false,
     });
 
-    expect(bilingualArticles.get()[1]).toBeUndefined();
-    expect(toast.info).toHaveBeenCalledWith(
-      "articleView.bilingualLoadOriginalFirst",
-    );
+    expect(bilingualArticles.get()[1]?.active).toBe(true);
+    expect(translateTextStream).toHaveBeenCalled();
+  });
+
+  it("does nothing when the article has no content", async () => {
+    await startBilingualReading({
+      id: 8,
+      title: "Empty",
+      content: "",
+      shownOriginal: false,
+    });
+
+    expect(bilingualArticles.get()[8]).toBeUndefined();
     expect(translateTextStream).not.toHaveBeenCalled();
+    expect(checkTranslationNeeded).not.toHaveBeenCalled();
   });
 
   it("toggleBilingualReading starts translation when original is loaded", async () => {

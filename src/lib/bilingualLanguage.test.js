@@ -75,6 +75,17 @@ describe("bilingualLanguage", () => {
     expect(isSameLanguageAsTarget(frenchHtml, "en-US")).toBe(false);
   });
 
+  it("does not confuse French and Turkish through shared ç or ü", () => {
+    expect(resolveArticleLanguageDecision(turkishHtml, "fr-FR").status).toBe(
+      LANGUAGE_DECISION.DIFFERENT,
+    );
+    expect(resolveArticleLanguageDecision(frenchHtml, "tr-TR").status).toBe(
+      LANGUAGE_DECISION.DIFFERENT,
+    );
+    expect(isSameLanguageAsTarget(turkishHtml, "fr-FR")).toBe(false);
+    expect(isSameLanguageAsTarget(frenchHtml, "tr-TR")).toBe(false);
+  });
+
   it("marks mixed or short content as uncertain", () => {
     expect(resolveArticleLanguageDecision(mixedHtml, "zh-CN").status).toBe(
       LANGUAGE_DECISION.UNCERTAIN,

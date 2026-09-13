@@ -14,8 +14,11 @@ const TARGET_LANGUAGE_INSTRUCTIONS = {
   "tr-TR": "Aşağıdaki içeriği Türkçeye çevirin. Yalnızca çeviriyi döndürün, açıklama yapmayın.",
 };
 
-const FRENCH_MARKERS = /[àâäçéèêëïîôùûüœæ]/i;
-const TURKISH_MARKERS = /[çğıöşü]/i;
+// Keep shared Latin characters such as ç and ü out of the language markers.
+// They occur in both French and Turkish and must not identify either language
+// on their own.
+const FRENCH_MARKERS = /[àâäæéèêëïîôœùûÿ]/i;
+const TURKISH_MARKERS = /[ğğıöşİ]/i;
 const FRENCH_WORD_PATTERN =
   /\b(le|la|les|des|du|une|est|dans|pour|avec|que|qui|pas|plus|sur|cette|sont|nous|vous)\b/gi;
 const TURKISH_WORD_PATTERN =

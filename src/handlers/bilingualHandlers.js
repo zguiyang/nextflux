@@ -47,17 +47,14 @@ export const invalidateBilingualSession = () => {
   createBilingualSession();
 };
 
-const resolveOriginalContent = (article, state) => {
+const resolveSourceContent = (article, state) => {
   if (state?.originalStatus === "loaded" && state.originalContent) {
     return { status: "loaded", content: state.originalContent };
   }
-  if (article?.shownOriginal && article?.content) {
+  if (article?.content) {
     return { status: "loaded", content: article.content };
   }
-  if (state?.originalStatus === "error") {
-    return { status: "error", error: state.originalError };
-  }
-  return { status: "needs_original" };
+  return { status: "empty" };
 };
 
 const shouldStartTranslation = (state) =>
@@ -316,7 +313,7 @@ const startTranslationForArticle = async (
 
 const syncOriginalContent = (article, articleId) => {
   const state = bilingualArticles.get()[articleId];
-  const resolved = resolveOriginalContent(article, state);
+  const resolved = resolveSourceContent(article, state);
 
   if (resolved.status === "loaded") {
     setOriginalLoaded(articleId, resolved.content);
@@ -340,10 +337,9 @@ export const startBilingualReading = async (article) => {
 
   const articleId = article.id;
   const existingState = bilingualArticles.get()[articleId];
-  const resolved = resolveOriginalContent(article, existingState);
+  const resolved = resolveSourceContent(article, existingState);
 
   if (resolved.status !== "loaded") {
-    toast.info(i18n.t("articleView.bilingualLoadOriginalFirst"));
     return;
   }
 
