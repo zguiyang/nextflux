@@ -120,6 +120,7 @@ export function SelItem({
   settingValue,
   options,
   description,
+  onChange,
 }) {
   return (
     <div
@@ -145,7 +146,9 @@ export function SelItem({
             selectedKeys={new Set([settingValue.toString()])}
             selectionMode="single"
             onSelectionChange={(values) =>
-              updateSettings({ [settingName]: values.currentKey })
+              onChange
+                ? onChange(values.currentKey)
+                : updateSettings({ [settingName]: values.currentKey })
             }
           >
             {options.map((option) => (

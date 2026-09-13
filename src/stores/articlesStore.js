@@ -18,6 +18,10 @@ export const loadingMore = atom(false); // 加载更多文章
 export const loadingOriginContent = atom(false);
 export const error = atom(null);
 export const filter = atom("all");
+export const articleListSortOverride = atom(null);
+export const setArticleListSortOverride = (sort) => {
+  articleListSortOverride.set(sort);
+};
 export const imageGalleryActive = atom(false);
 export const hasMore = atom(true);
 export const currentPage = atom(1);
@@ -39,6 +43,7 @@ export async function loadArticles(
   try {
     const feeds = await getFeeds();
     const settings = settingsState.get();
+    const sortOverride = articleListSortOverride.get();
     const showHiddenFeeds = settings.showHiddenFeeds;
     let targetFeeds;
 
@@ -73,8 +78,8 @@ export async function loadArticles(
       filter.get(),
       page,
       pageSize.get(),
-      settings.sortDirection,
-      settings.sortField,
+      sortOverride?.sortDirection || settings.sortDirection,
+      sortOverride?.sortField || settings.sortField,
     );
 
     // 计算分页状态

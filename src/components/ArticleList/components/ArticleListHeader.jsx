@@ -13,6 +13,7 @@ import {
   getFeedCount,
 } from "@/stores/feedsStore.js";
 import MenuButton from "./MenuButton";
+import SortButton from "./SortButton";
 
 export default function ArticleListHeader() {
   const { feedId, categoryId } = useParams();
@@ -90,6 +91,7 @@ export default function ArticleListHeader() {
           </div>
           <div className="ml-auto flex gap-1">
             <MarkAllReadButton />
+            <SortButton />
             <MenuButton />
           </div>
         </div>

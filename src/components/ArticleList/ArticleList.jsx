@@ -8,6 +8,7 @@ import {
   currentPage,
   loading,
   visibleRange,
+  articleListSortOverride,
 } from "@/stores/articlesStore.js";
 import { lastSync } from "@/stores/syncStore.js";
 import { useParams } from "react-router-dom";
@@ -24,6 +25,7 @@ const ArticleList = () => {
   const { feedId, categoryId, articleId } = useParams();
   const $filteredArticles = useStore(filteredArticles);
   const $filter = useStore(filter);
+  const $articleListSortOverride = useStore(articleListSortOverride);
   const $lastSync = useStore(lastSync);
   const {
     showUnreadByDefault,
@@ -84,6 +86,7 @@ const ArticleList = () => {
     feedId,
     categoryId,
     $filter,
+    $articleListSortOverride,
     sortDirection,
     sortField,
     showHiddenFeeds,

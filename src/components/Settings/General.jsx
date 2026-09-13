@@ -1,13 +1,11 @@
-import { settingsState } from "@/stores/settingsStore";
+import { settingsState, updateSettings } from "@/stores/settingsStore";
 import {
+  ArrowDownUp,
   CircleCheck,
   CircleDot,
-  ClockArrowDown,
-  ClockArrowUp,
   Eye,
   FolderOpen,
   RefreshCw,
-  CalendarDays,
 } from "lucide-react";
 import { useStore } from "@nanostores/react";
 import {
@@ -78,39 +76,39 @@ export default function General() {
       </ItemWrapper>
       <ItemWrapper title={t("settings.general.articleList")}>
         <SelItem
-          label={t("settings.general.sortItems")}
+          label={t("settings.general.sort")}
           icon={
             <SettingIcon variant="blue">
-              {sortDirection === "desc" ? <ClockArrowDown /> : <ClockArrowUp />}
+              <ArrowDownUp />
             </SettingIcon>
           }
-          settingName="sortDirection"
-          settingValue={sortDirection}
-          options={[
-            { value: "desc", label: t("settings.general.sortDesc") },
-            { value: "asc", label: t("settings.general.sortAsc") },
-          ]}
-        />
-        <Separator />
-        <SelItem
-          label={t("settings.general.sortField")}
-          icon={
-            <SettingIcon variant="blue">
-              <CalendarDays />
-            </SettingIcon>
-          }
-          settingName="sortField"
-          settingValue={sortField}
+          settingName="sortOrder"
+          settingValue={`${sortField}:${sortDirection}`}
           options={[
             {
-              value: "published_at",
-              label: t("settings.general.sortByPublishDate"),
+              value: "published_at:desc",
+              label: t("settings.general.sortPublishedDesc"),
             },
             {
-              value: "created_at",
-              label: t("settings.general.sortByCreateDate"),
+              value: "published_at:asc",
+              label: t("settings.general.sortPublishedAsc"),
+            },
+            {
+              value: "created_at:desc",
+              label: t("settings.general.sortCreatedDesc"),
+            },
+            {
+              value: "created_at:asc",
+              label: t("settings.general.sortCreatedAsc"),
             },
           ]}
+          onChange={(value) => {
+            const [nextSortField, nextSortDirection] = value.split(":");
+            updateSettings({
+              sortField: nextSortField,
+              sortDirection: nextSortDirection,
+            });
+          }}
         />
         <Separator />
         <SwitchItem
