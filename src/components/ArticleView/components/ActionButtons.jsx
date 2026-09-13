@@ -28,7 +28,7 @@ import minifluxAPI from "@/api/miniflux";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { hasIntegrations } from "@/stores/basicInfoStore.js";
-import { settingsState } from "@/stores/settingsStore.js";
+import { getAICapability, settingsState } from "@/stores/settingsStore.js";
 import {
   aiSummaries,
   setSummaryLoading,
@@ -47,7 +47,8 @@ export default function ActionButtons() {
   const fetchLoading = useStore(loadingOriginContent);
   const [saveLoading, setSaveLoading] = useState(false);
   const $hasIntegrations = useStore(hasIntegrations);
-  const { aiApiKey, floatingSidebar } = useStore(settingsState);
+  const { floatingSidebar } = useStore(settingsState);
+  const { provider: summaryProvider } = getAICapability("summary");
   const $aiSummaries = useStore(aiSummaries);
   const currentSummaryState = $aiSummaries[$activeArticle?.id];
 
@@ -269,7 +270,7 @@ export default function ActionButtons() {
               </Tooltip.Content>
             </Tooltip>
           )}
-          {aiApiKey && (
+          {summaryProvider?.apiKey && (
             <Tooltip delay={0}>
               <Button
                 onPress={handleAISummarize}

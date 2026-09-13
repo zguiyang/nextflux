@@ -315,15 +315,33 @@ export default {
     },
     ai: {
       title: "AI",
-      description:
-        "Şu anda yalnızca OpenAI ve OpenAI uyumlu API'ler desteklenmektedir",
-      openai: "OpenAI Yapılandırması",
+      service: "Servis",
+      capabilities: "AI Yetenekleri",
       apiKey: "API Anahtarı",
-      apiKeyPlaceholder: "OpenAI API anahtarınızı girin",
+      apiKeyPlaceholder: "API anahtarını girin",
       baseUrl: "Temel URL",
-      model: "MODEL",
+      fetchModels: "Modelleri getir",
+      fetchModelsHint: "Başarılı getirmeden sonra listeden seçin",
+      modelsLoaded: "{{count}} model yüklendi",
+      fetchModelsFailed:
+        "Model listesi alınamadı. Model adını manuel girin.",
+      model: "Model",
       selectModel: "Model seç",
+      modelUnset: "Ayarlanmadı",
       prompt: "Prompt",
+      testCapability: "Bu ayarı test et",
+      testSuccess: "Bağlantı başarılı",
+      testFailed: "Bağlantı başarısız",
+      capabilityCards: {
+        summary: {
+          name: "Makale özeti",
+        },
+      },
+      builtinPrompts: {
+        summary: {
+          name: "Makale özeti",
+        },
+      },
     },
   },
   error: {

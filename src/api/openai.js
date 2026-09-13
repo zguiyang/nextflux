@@ -1,4 +1,4 @@
-import { settingsState } from "@/stores/settingsStore.js";
+import { getAICapability } from "@/stores/settingsStore.js";
 
 const normalizeBaseUrl = (baseUrl) => baseUrl.trim().replace(/\/+$/, "");
 
@@ -131,7 +131,11 @@ function createThinkFilter(onChunk) {
 }
 
 export const summarizeArticleStream = async (article, { onChunk, onDone, onError }) => {
-  const { aiApiKey, aiBaseUrl, aiModel, aiPrompt } = settingsState.get();
+  const { provider, model, prompt } = getAICapability("summary");
+  const aiApiKey = provider?.apiKey;
+  const aiBaseUrl = provider?.baseUrl;
+  const aiModel = model?.modelId;
+  const aiPrompt = prompt?.content;
 
   if (!aiApiKey) {
     onError(new Error("AI API Key not configured"));

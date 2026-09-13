@@ -1,5 +1,28 @@
 import { persistentAtom } from "@nanostores/persistent";
 
+const defaultAIProvider = {
+  id: "default",
+  nameKey: "settings.ai.builtinProviders.default.name",
+  apiKey: "",
+  baseUrl: "https://api.openai.com/v1",
+};
+
+const defaultAIModel = {
+  id: "default",
+  providerId: defaultAIProvider.id,
+  nameKey: "settings.ai.builtinModels.default.name",
+  modelId: "gpt-4o-mini",
+};
+
+const defaultAISummaryPrompt = {
+  id: "summary-default",
+  capability: "summary",
+  nameKey: "settings.ai.builtinPrompts.summary.name",
+  descriptionKey: "settings.ai.builtinPrompts.summary.description",
+  content:
+    "You are a helpful assistant that summarizes articles concisely. Provide a clear, structured summary in the same language as the article. Format: just plain text, no markdown.",
+};
+
 const defaultValue = {
   lineHeight: 1.8,
   fontSize: 16,
@@ -30,11 +53,110 @@ const defaultValue = {
   interfaceFontSize: "16",
   showIndicator: true,
   floatingSidebar: false,
-  aiApiKey: "",
-  aiBaseUrl: "https://api.openai.com/v1",
-  aiModel: "gpt-4o-mini",
-  aiPrompt:
-    "You are a helpful assistant that summarizes articles concisely. Provide a clear, structured summary in the same language as the article. Format: just plain text, no markdown.",
+  aiProviders: [defaultAIProvider],
+  aiModels: [defaultAIModel],
+  aiPrompts: [defaultAISummaryPrompt],
+  aiCapabilities: {
+    summary: {
+      modelId: defaultAIModel.id,
+      promptId: defaultAISummaryPrompt.id,
+    },
+  },
+};
+
+const hasMixedModelCredentials = (models) =>
+  Array.isArray(models) &&
+  models.some((item) => "apiKey" in item || "baseUrl" in item);
+
+const migrateFromMixedModels = (storedValue) => {
+  const providers = storedValue.aiModels.map((item) => ({
+    id: item.id,
+    ...(item.name ? { name: item.name } : {}),
+    ...(item.nameKey ? { nameKey: item.nameKey } : {}),
+    apiKey: item.apiKey ?? "",
+    baseUrl: item.baseUrl ?? defaultAIProvider.baseUrl,
+  }));
+
+  const models = storedValue.aiModels.map((item) => ({
+    id: item.id,
+    providerId: item.id,
+    ...(item.name ? { name: item.name } : {}),
+    ...(item.nameKey ? { nameKey: item.nameKey } : {}),
+    modelId: item.model ?? item.modelId ?? defaultAIModel.modelId,
+  }));
+
+  const prompts = Array.isArray(storedValue.aiPrompts)
+    ? storedValue.aiPrompts
+    : [defaultAISummaryPrompt];
+
+  const capabilities = storedValue.aiCapabilities?.summary
+    ? storedValue.aiCapabilities
+    : {
+        summary: {
+          modelId: models[0]?.id ?? defaultAIModel.id,
+          promptId: prompts[0]?.id ?? defaultAISummaryPrompt.id,
+        },
+      };
+
+  return {
+    ...defaultValue,
+    ...storedValue,
+    aiProviders: providers,
+    aiModels: models,
+    aiPrompts: prompts,
+    aiCapabilities: capabilities,
+  };
+};
+
+const migrateFromLegacyAISettings = (storedValue) => {
+  const provider = {
+    ...defaultAIProvider,
+    apiKey: storedValue.aiApiKey ?? defaultAIProvider.apiKey,
+    baseUrl: storedValue.aiBaseUrl ?? defaultAIProvider.baseUrl,
+  };
+  const model = {
+    ...defaultAIModel,
+    modelId: storedValue.aiModel ?? defaultAIModel.modelId,
+  };
+  const prompt = {
+    ...defaultAISummaryPrompt,
+    content: storedValue.aiPrompt ?? defaultAISummaryPrompt.content,
+  };
+
+  return {
+    ...defaultValue,
+    ...storedValue,
+    aiProviders: [provider],
+    aiModels: [model],
+    aiPrompts: [prompt],
+    aiCapabilities: {
+      summary: {
+        modelId: model.id,
+        promptId: prompt.id,
+      },
+    },
+  };
+};
+
+export const migrateAISettings = (storedValue) => {
+  if (Array.isArray(storedValue.aiProviders)) {
+    return { ...defaultValue, ...storedValue };
+  }
+
+  if (hasMixedModelCredentials(storedValue.aiModels)) {
+    return migrateFromMixedModels(storedValue);
+  }
+
+  if (
+    storedValue.aiApiKey !== undefined ||
+    storedValue.aiBaseUrl !== undefined ||
+    storedValue.aiModel !== undefined ||
+    storedValue.aiPrompt !== undefined
+  ) {
+    return migrateFromLegacyAISettings(storedValue);
+  }
+
+  return { ...defaultValue, ...storedValue };
 };
 
 export const settingsState = persistentAtom("settings", defaultValue, {
@@ -49,12 +171,37 @@ export const settingsState = persistentAtom("settings", defaultValue, {
   },
   decode: (str) => {
     const storedValue = JSON.parse(str);
-    return { ...defaultValue, ...storedValue };
+    return migrateAISettings(storedValue);
   },
 });
 
 export const updateSettings = (settingsChanges) =>
   settingsState.set({ ...settingsState.get(), ...settingsChanges });
+
+export const resolveAICapability = (settings, capability) => {
+  const providers = settings.aiProviders || [];
+  const models = settings.aiModels || [];
+  const prompts = settings.aiPrompts || [];
+  const binding = settings.aiCapabilities?.[capability] || {};
+
+  const model =
+    models.find((item) => item.id === binding.modelId) || models[0] || null;
+  const provider = model
+    ? providers.find((item) => item.id === model.providerId) ||
+      providers[0] ||
+      null
+    : null;
+  const prompt =
+    prompts.find((item) => item.id === binding.promptId) ||
+    prompts.find((item) => item.capability === capability) ||
+    prompts[0] ||
+    null;
+
+  return { provider, model, prompt };
+};
+
+export const getAICapability = (capability) =>
+  resolveAICapability(settingsState.get(), capability);
 
 export const resetSettings = () => {
   // 定义阅读相关的设置项

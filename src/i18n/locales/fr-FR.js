@@ -317,15 +317,33 @@ export default {
     },
     ai: {
       title: "IA",
-      description:
-        "Actuellement, seuls OpenAI et les API compatibles OpenAI sont pris en charge",
-      openai: "Configuration OpenAI",
+      service: "Service",
+      capabilities: "Capacités IA",
       apiKey: "Clé API",
-      apiKeyPlaceholder: "Entrez votre clé API OpenAI",
+      apiKeyPlaceholder: "Entrez la clé API",
       baseUrl: "URL de base",
-      model: "MODÈLE",
+      fetchModels: "Récupérer les modèles",
+      fetchModelsHint: "Sélectionnez dans la liste après récupération",
+      modelsLoaded: "{{count}} modèles chargés",
+      fetchModelsFailed:
+        "Aucune liste de modèles. Saisissez un nom de modèle manuellement.",
+      model: "Modèle",
       selectModel: "Sélectionner un modèle",
+      modelUnset: "Non défini",
       prompt: "Prompt",
+      testCapability: "Tester cette configuration",
+      testSuccess: "Connexion réussie",
+      testFailed: "Échec de la connexion",
+      capabilityCards: {
+        summary: {
+          name: "Résumé d'article",
+        },
+      },
+      builtinPrompts: {
+        summary: {
+          name: "Résumé d'article",
+        },
+      },
     },
   },
   error: {
