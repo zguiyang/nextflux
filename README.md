@@ -1,127 +1,180 @@
 # Nextflux
 
-A modern RSS reader client for [Miniflux](https://github.com/miniflux/v2) built with React + Vite.
+A modern web-based RSS reader for [Miniflux](https://github.com/miniflux/v2), built with React, Vite, and HeroUI.
 
-![preview](images/preview.png)
-![dark](images/dark.png)
-![settings](images/settings.png)
-![edit](images/edit.png)
+This repository is a community-maintained fork of [electh/nextflux](https://github.com/electh/nextflux). It is developed independently for additional features, usability improvements, and personal deployment needs. It is not affiliated with or endorsed by the upstream project.
 
-## ✨ Features
+![Nextflux preview](images/preview.png)
+![Nextflux dark mode](images/dark.png)
+![Nextflux settings](images/settings.png)
+![Nextflux article editing](images/edit.png)
 
-- 🚀 Fast and responsive UI built with HeroUI (Previously NextUI)
-- 🌐 Connect to your Miniflux server
-- 🔄 Automatic background sync with configurable intervals
-- 📱 Installable as a desktop web app (PWA, no offline caching)
-- 🌙 Light/Dark mode with multiple theme options
-- 🌍 i18n support (English & Chinese & Turkish & French)
-- 👀 Mark as read on scroll
-- 🎯 Rich reading experience
-    - Custom font settings
-    - Image gallery with touch gestures support
-    - Save article to 3rd party services
-- ⌨️ Keyboard shortcuts
-- 📊 Feed management
-    - OPML import
-    - Category organization
-    - Feed hiding
-    - Feed discovery and search
-    - Advanced options for feed management
+## Features
 
-## 🚀 Deployment
+### Reading and feed management
 
-### Docker Deployment (standalone)
+- Connect to any Miniflux server using its server URL and API credentials
+- Automatic background synchronization with a configurable interval
+- Incremental article synchronization with local browser storage
+- Mark articles as read while scrolling
+- Global **All Articles** and **Starred Articles** views in the sidebar
+- Unread and starred article counts for quick navigation
+- OPML import, category organization, feed hiding, feed discovery, and search
+- Image gallery with touch gestures
+- Responsive article navigation with touch-friendly mobile transitions
+- Save articles to supported third-party services
+- Keyboard shortcuts for common navigation and reading actions
+- Light and dark themes with additional appearance controls
+- English, Chinese, Turkish, and French translations
 
-Run with Docker using the following command:
+### Community fork improvements
+
+- **Visible feed parsing errors**: feeds with parsing failures display a warning indicator in the sidebar. Hover or select the indicator to see the server-provided or fallback error message.
+- **More reliable manual refresh**: refreshing a feed now waits for the server refresh and the following local synchronization. Success and error notifications reflect the actual result of both operations.
+- **Further optimized on-demand reading fonts**: system fonts require no network request, while selected web fonts are loaded only when needed. This reduces unnecessary font downloads during initial page load.
+- **Improved PWA installation**: the app includes a complete web app manifest and can be installed as a standalone desktop web app in supported browsers. Offline caching and a service worker are intentionally not required.
+
+## Requirements
+
+- Node.js 20 or newer for local development
+- A running [Miniflux](https://miniflux.app/) server
+
+## Getting started
+
+Clone this repository and install its dependencies:
 
 ```bash
-docker run -d --name nextflux -p 3000:3000 --restart unless-stopped electh/nextflux:latest
+git clone https://github.com/zguiyang/nextflux.git
+cd nextflux
+npm ci
 ```
 
-### Cloudflare Pages Deployment (standalone)
+Start the development server:
 
-1. Fork this repository to your GitHub account
-2. Create a new project in Cloudflare Pages
-3. Select your forked repository
-4. Select Framework preset: `React(Vite)`
-5. Set build command: `npm run build`
-6. Set build output directory: `dist`
-7. Deploy and access through the Cloudflare-assigned domain
+```bash
+npm run dev
+```
 
-### Docker Compose Deployment (with Miniflux)
+Open the displayed local URL, then provide:
 
-To deploy with Miniflux, copy [docker compose file](./compose.yml) and replace the passwords, then run:
+- Your Miniflux server URL
+- An API token, or a Miniflux username and password
+
+To create a production build locally:
+
+```bash
+npm run build
+npm run preview
+```
+
+## Deployment
+
+Cloudflare Pages is the recommended deployment platform for this project. Nextflux is a static Vite frontend, so it can be built and served globally without maintaining a separate application server.
+
+### Recommended: Cloudflare Pages
+
+1. Push this repository to your GitHub account.
+2. In the Cloudflare dashboard, open **Workers & Pages** and choose **Create application**.
+3. Select **Pages** and connect the GitHub repository containing this fork.
+4. Select the `main` branch for production deployments.
+5. Use the following build settings:
+
+   - Framework preset: `React (Vite)`
+   - Root directory: `/`
+   - Build command: `npm run build`
+   - Build output directory: `dist`
+   - Node.js version: `20` or newer
+
+6. Click **Save and Deploy**.
+7. Optionally add a custom domain from the Cloudflare Pages project settings.
+
+No frontend environment variables are required. After deployment, open the generated site and enter your Miniflux server URL and API credentials in the login screen.
+
+Because the frontend calls Miniflux directly from the browser, the Miniflux server must be reachable from the deployed site. Use HTTPS for the Miniflux endpoint in production and ensure its reverse proxy or access policy permits requests from the site where necessary.
+
+Cloudflare Pages automatically creates new deployments when changes are pushed to the configured branch, which makes it a good fit for maintaining this fork independently.
+
+### Docker
+
+Docker is an alternative for self-hosting or local environments. Build the image from this repository so that the container runs this fork's code:
+
+```bash
+docker build -t nextflux:local .
+docker run -d \
+  --name nextflux \
+  -p 3000:3000 \
+  --restart unless-stopped \
+  nextflux:local
+```
+
+The container serves the application on port `3000`.
+
+### Docker Compose with Miniflux
+
+The included [compose.yml](./compose.yml) provides a local Miniflux and PostgreSQL stack. Before using it, replace the example credentials with secure values.
 
 ```bash
 docker compose up -d
 ```
 
-## 📝 Configuration
+The compose file currently references the upstream `electh/nextflux` image. To run this fork instead, build `nextflux:local` as shown above and update the `nextflux` service image, or use the standalone Docker instructions. This compose setup is mainly intended for local testing because it exposes example Miniflux credentials.
 
-The app requires a Miniflux server to function. You'll need to provide:
+## PWA installation
 
-- Server URL
-- API Token / Username and Password
+Nextflux can be installed as a desktop web app from Chrome or Edge without offline caching or a service worker:
 
-## 💻 Install as a Desktop App
+1. Open the deployed app over HTTPS, or use `http://localhost` during local development.
+2. Select the install icon in the browser address bar, or choose `Install app` from the browser menu.
+3. Launch Nextflux from your applications menu or dock.
 
-Nextflux can be installed to your desktop from Chrome or Edge without any offline caching or service worker.
+The app provides a web app manifest, 192×192 and 512×512 icons, and `display: standalone`. Network access to the Miniflux server is still required for synchronization and article updates.
 
-1. Open the deployed app over HTTPS (or `http://localhost` during local development).
-2. Look for the install icon in the address bar, or use the browser menu:
-   - **Chrome / Edge**: `Install app` or `Apps` → `Install this site as an app`
-3. Launch Nextflux from your applications menu or dock like a native app.
-
-Requirements: a valid web app manifest, 192×192 and 512×512 icons, and `display: standalone`. No service worker is required.
-
-## 🌍 Browser Support
+## Browser support
 
 - Chrome (recommended)
 - Firefox
 - Safari
 - Edge
 
-## 📱 Mobile Support
+The interface is primarily designed for desktop use, with responsive behavior and touch-friendly article navigation on mobile devices.
 
-The app is primarily designed for desktop use. While it works on mobile devices, a native RSS reader app will provide a much better experience on the go.
+## Development
 
-> 💡 **Tip**: For a better native experience on mobile, consider using dedicated RSS reader apps like [Reeder](https://reederapp.com/), [Unread](https://www.goldenhillsoftware.com/unread/) or [Capy Reader](https://capyreader.com/).
+Available scripts:
 
-## 🤝 Contributing
+```bash
+npm run dev      # Start the Vite development server
+npm run build    # Build the production bundle
+npm run preview  # Preview the production bundle locally
+npm run lint     # Run ESLint
+npm test         # Run the test suite
+```
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+## Relationship to the upstream project
 
-## 📄 License
+- Original project: [electh/nextflux](https://github.com/electh/nextflux)
+- Original project author: [@electh](https://github.com/electh)
+- This repository began as a fork of the upstream project.
+- The Git history is retained so the origin of the code and subsequent changes remain traceable.
+- This fork may diverge from upstream and is maintained on its own schedule.
 
-Do whatever the heck you want with it—just don’t come crying to me if it messes up your stuff. Just kidding (or not),
-but seriously, it’s all yours.
+Please do not present this repository as the official Nextflux project. Upstream fixes and security updates may be incorporated selectively when they are relevant to this fork.
 
-## 📚 FAQ
+## Attribution and license
 
-### 1. My scrollbar looks like shit in Windows—how do I fix this?
+Please preserve the original project attribution and any applicable third-party notices when redistributing this software.
 
-If you’re using Microsoft Edge, head over to the `edge://flags` page and enable the `Fluent overlay scrollbars` option.
-Chrome might have something similar lurking around.
+At the time of writing, this repository and the upstream project do not contain a standard `LICENSE` file. The informal license wording in the upstream README should not be treated as a substitute for a clearly identified open-source license. Before redistributing this derivative project, verify the applicable permissions with the upstream maintainer and retain any license or copyright notices they provide.
 
-### 2. Are there any plans to support Fever or Google Reader APIs?
+## Contributing
 
-Nope, sorry folks. For now, I’m all in on the Miniflux API—gotta pick my battles.
+Issues and pull requests are welcome for changes that improve this fork. For upstream-specific changes, please open them in the [upstream repository](https://github.com/electh/nextflux) instead.
 
-### 3. Why does it resemble Reeder so much?
+## Acknowledgements
 
-Reeder is a fantastic RSS reader. Since my design skills are about as good as a potato's, I took some "inspiration" from
-its UI style, slapped it on, and called it a day.
+Thanks to the original Nextflux project and its contributors, including:
 
-## 🌍 Translation
+- Turkish translation: [@TaylanTatli](https://github.com/TaylanTatli)
+- French translation: [@quent1-fr](https://github.com/quent1-fr)
 
-### Contributor
-
-- 🇹🇷 Turkish: [@TaylanTatli](https://github.com/TaylanTatli)
-
-- 🇫🇷 French: [@quent1-fr](https://github.com/quent1-fr)
-
-
-
-
-
-
+Nextflux also builds on the Miniflux API and the open-source React ecosystem.
