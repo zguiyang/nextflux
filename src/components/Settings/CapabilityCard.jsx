@@ -1,0 +1,120 @@
+import {
+  Button,
+  Input,
+  Label,
+  ListBox,
+  Select,
+  Separator,
+  Spinner,
+  TextArea,
+  TextField,
+} from "@heroui/react";
+import { useTranslation } from "react-i18next";
+import { getCapabilityCardTitle } from "@/components/Settings/aiSettingsState.js";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible.jsx";
+import { ChevronDown } from "lucide-react";
+
+export default function CapabilityCard({
+  capability,
+  open,
+  onOpenChange,
+  modelId,
+  onModelIdChange,
+  prompt,
+  onPromptChange,
+  availableModels,
+  onTest,
+  testing,
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <Collapsible open={open} onOpenChange={onOpenChange}>
+      <div className="bg-default/60 dark:bg-default/30">
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between gap-2 px-2.5 py-3 text-left"
+          >
+            <span className="text-sm font-medium text-foreground">
+              {getCapabilityCardTitle(capability, modelId, t)}
+            </span>
+            <ChevronDown
+              className={`size-4 shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`}
+            />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="overflow-visible">
+          <div className="flex flex-col gap-0 border-t border-foreground/10">
+            {availableModels.length > 0 && (
+              <>
+                <div className="p-2.5">
+                  <Select
+                    variant="secondary"
+                    value={availableModels.includes(modelId) ? modelId : null}
+                    onChange={(value) => onModelIdChange(value || "")}
+                  >
+                    <Label>{t("settings.ai.selectModel")}</Label>
+                    <Select.Trigger>
+                      <Select.Value />
+                      <Select.Indicator />
+                    </Select.Trigger>
+                    <Select.Popover>
+                      <ListBox>
+                        {availableModels.map((model) => (
+                          <ListBox.Item key={model} id={model} textValue={model}>
+                            {model}
+                            <ListBox.ItemIndicator />
+                          </ListBox.Item>
+                        ))}
+                      </ListBox>
+                    </Select.Popover>
+                  </Select>
+                </div>
+                <Separator />
+              </>
+            )}
+            <div className="p-2.5">
+              <TextField variant="secondary">
+                <Label>{t("settings.ai.model")}</Label>
+                <Input
+                  type="text"
+                  value={modelId}
+                  onChange={(e) => onModelIdChange(e.target.value)}
+                  placeholder="gpt-4o-mini"
+                />
+              </TextField>
+            </div>
+            <Separator />
+            <div className="p-2.5">
+              <TextField variant="secondary">
+                <Label>{t("settings.ai.prompt")}</Label>
+                <TextArea
+                  value={prompt}
+                  onChange={(e) => onPromptChange(e.target.value)}
+                  rows={4}
+                />
+              </TextField>
+            </div>
+            <Separator />
+            <div className="p-2.5">
+              <Button
+                variant="outline"
+                fullWidth
+                onPress={onTest}
+                isPending={testing}
+              >
+                {testing && <Spinner color="current" size="sm" />}
+                {t("settings.ai.testCapability")}
+              </Button>
+            </div>
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
+}

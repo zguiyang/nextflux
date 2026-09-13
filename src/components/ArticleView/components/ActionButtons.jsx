@@ -8,6 +8,7 @@ import {
   CloudUpload,
   ArrowRight,
   Sparkles,
+  Languages,
 } from "lucide-react";
 import {
   handleMarkStatus,
@@ -37,6 +38,8 @@ import {
   setSummaryError,
 } from "@/stores/aiStore.js";
 import { summarizeArticleStream } from "@/api/openai.js";
+import { toggleBilingualReading } from "@/handlers/bilingualHandlers.js";
+import { bilingualArticles } from "@/stores/bilingualStore.js";
 
 export default function ActionButtons() {
   const { t } = useTranslation();
@@ -49,8 +52,11 @@ export default function ActionButtons() {
   const $hasIntegrations = useStore(hasIntegrations);
   const { floatingSidebar } = useStore(settingsState);
   const { provider: summaryProvider } = getAICapability("summary");
+  const { provider: translationProvider } = getAICapability("translation");
   const $aiSummaries = useStore(aiSummaries);
+  const $bilingualArticles = useStore(bilingualArticles);
   const currentSummaryState = $aiSummaries[$activeArticle?.id];
+  const bilingualState = $bilingualArticles[$activeArticle?.id];
 
   // 获取当前文章在列表中的索引
   const currentIndex = $articles.findIndex((a) => a.id === $activeArticle?.id);
@@ -267,6 +273,37 @@ export default function ActionButtons() {
               <Tooltip.Content showArrow>
                 <Tooltip.Arrow />
                 {t("articleView.saveToThirdParty")}
+              </Tooltip.Content>
+            </Tooltip>
+          )}
+          {translationProvider?.apiKey && (
+            <Tooltip delay={0}>
+              <Button
+                onPress={() => toggleBilingualReading($activeArticle)}
+                variant="ghost"
+                isIconOnly
+                size="sm"
+                isPending={
+                  fetchLoading ||
+                  (bilingualState?.active &&
+                    bilingualState.translationStatus === "translating")
+                }
+              >
+                {fetchLoading ||
+                (bilingualState?.active &&
+                  bilingualState.translationStatus === "translating") ? (
+                  <Spinner color="current" size="sm" />
+                ) : (
+                  <Languages
+                    className={`size-4 ${bilingualState?.active ? "text-accent" : "text-muted"}`}
+                  />
+                )}
+              </Button>
+              <Tooltip.Content showArrow>
+                <Tooltip.Arrow />
+                {bilingualState?.active
+                  ? t("articleView.bilingualClose")
+                  : t("articleView.bilingualRead")}
               </Tooltip.Content>
             </Tooltip>
           )}

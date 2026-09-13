@@ -23,6 +23,22 @@ const defaultAISummaryPrompt = {
     "You are a helpful assistant that summarizes articles concisely. Provide a clear, structured summary in the same language as the article. Format: just plain text, no markdown.",
 };
 
+const defaultAITranslationModel = {
+  id: "translation",
+  providerId: defaultAIProvider.id,
+  nameKey: "settings.ai.builtinModels.translation.name",
+  modelId: "gpt-4o-mini",
+};
+
+const defaultAITranslationPrompt = {
+  id: "translation-default",
+  capability: "translation",
+  nameKey: "settings.ai.builtinPrompts.translation.name",
+  descriptionKey: "settings.ai.builtinPrompts.translation.description",
+  content:
+    "You are a professional translator. Translate the given text accurately while preserving meaning and tone. Return only the translation as plain text, without explanations or markdown.",
+};
+
 const defaultValue = {
   lineHeight: 1.8,
   fontSize: 16,
@@ -54,12 +70,16 @@ const defaultValue = {
   showIndicator: true,
   floatingSidebar: false,
   aiProviders: [defaultAIProvider],
-  aiModels: [defaultAIModel],
-  aiPrompts: [defaultAISummaryPrompt],
+  aiModels: [defaultAIModel, defaultAITranslationModel],
+  aiPrompts: [defaultAISummaryPrompt, defaultAITranslationPrompt],
   aiCapabilities: {
     summary: {
       modelId: defaultAIModel.id,
       promptId: defaultAISummaryPrompt.id,
+    },
+    translation: {
+      modelId: defaultAITranslationModel.id,
+      promptId: defaultAITranslationPrompt.id,
     },
   },
 };
@@ -138,13 +158,41 @@ const migrateFromLegacyAISettings = (storedValue) => {
   };
 };
 
+const ensureTranslationCapability = (settings) => {
+  const prompts = [...(settings.aiPrompts || [])];
+  const models = [...(settings.aiModels || [])];
+  const capabilities = { ...(settings.aiCapabilities || {}) };
+
+  if (!prompts.some((item) => item.id === defaultAITranslationPrompt.id)) {
+    prompts.push(defaultAITranslationPrompt);
+  }
+
+  if (!models.some((item) => item.id === defaultAITranslationModel.id)) {
+    models.push(defaultAITranslationModel);
+  }
+
+  if (!capabilities.translation) {
+    capabilities.translation = {
+      modelId: defaultAITranslationModel.id,
+      promptId: defaultAITranslationPrompt.id,
+    };
+  }
+
+  return {
+    ...settings,
+    aiPrompts: prompts,
+    aiModels: models,
+    aiCapabilities: capabilities,
+  };
+};
+
 export const migrateAISettings = (storedValue) => {
   if (Array.isArray(storedValue.aiProviders)) {
-    return { ...defaultValue, ...storedValue };
+    return ensureTranslationCapability({ ...defaultValue, ...storedValue });
   }
 
   if (hasMixedModelCredentials(storedValue.aiModels)) {
-    return migrateFromMixedModels(storedValue);
+    return ensureTranslationCapability(migrateFromMixedModels(storedValue));
   }
 
   if (
@@ -153,10 +201,10 @@ export const migrateAISettings = (storedValue) => {
     storedValue.aiModel !== undefined ||
     storedValue.aiPrompt !== undefined
   ) {
-    return migrateFromLegacyAISettings(storedValue);
+    return ensureTranslationCapability(migrateFromLegacyAISettings(storedValue));
   }
 
-  return { ...defaultValue, ...storedValue };
+  return ensureTranslationCapability({ ...defaultValue, ...storedValue });
 };
 
 export const settingsState = persistentAtom("settings", defaultValue, {

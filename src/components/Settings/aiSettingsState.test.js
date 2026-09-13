@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import {
   SUMMARY_CAPABILITY,
+  TRANSLATION_CAPABILITY,
   buildCapabilitySaveUpdates,
   fetchModelsForService,
   getCapabilityCardState,
@@ -31,6 +32,11 @@ describe("AI settings editor state", () => {
         providerId: "default",
         modelId: "gpt-4o-mini",
       },
+      {
+        id: "translation",
+        providerId: "default",
+        modelId: "gpt-4o-mini",
+      },
     ],
     aiPrompts: [
       {
@@ -39,9 +45,16 @@ describe("AI settings editor state", () => {
         nameKey: "settings.ai.builtinPrompts.summary.name",
         content: "Summarize in plain text",
       },
+      {
+        id: "translation-default",
+        capability: "translation",
+        nameKey: "settings.ai.builtinPrompts.translation.name",
+        content: "Translate in plain text",
+      },
     ],
     aiCapabilities: {
       summary: { modelId: "default", promptId: "summary-default" },
+      translation: { modelId: "translation", promptId: "translation-default" },
     },
   };
 
@@ -193,5 +206,34 @@ describe("AI settings editor state", () => {
       "文章总结 · 未设置",
     );
     expect(titleT).not.toHaveBeenCalledWith(prompt.content);
+  });
+
+  it("maps translation capability edits without rewriting prompt content", () => {
+    const updates = buildCapabilitySaveUpdates(baseSettings, {
+      apiKey: "new-key",
+      baseUrl: "https://new.example/v1",
+      capabilities: {
+        [TRANSLATION_CAPABILITY]: {
+          modelId: "gpt-4.1",
+          promptContent: "用户自定义提示词，保持原样",
+        },
+      },
+    });
+
+    expect(updates.aiPrompts[1]).toMatchObject({
+      id: "translation-default",
+      content: "用户自定义提示词，保持原样",
+    });
+    expect(updates.aiModels[1]).toMatchObject({
+      id: "translation",
+      modelId: "gpt-4.1",
+    });
+    expect(getCapabilityCardState(
+      { ...baseSettings, ...updates },
+      TRANSLATION_CAPABILITY,
+    )).toEqual({
+      modelId: "gpt-4.1",
+      promptContent: "用户自定义提示词，保持原样",
+    });
   });
 });

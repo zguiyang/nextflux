@@ -11,24 +11,24 @@ import {
   filteredArticles,
   imageGalleryActive,
 } from "@/stores/articlesStore.js";
-import { Chip, Separator, ScrollShadow, Link } from "@heroui/react";
+import { Separator, ScrollShadow } from "@heroui/react";
 import EmptyPlaceholder from "@/components/ArticleList/components/EmptyPlaceholder";
 import { cleanTitle, getFontSizeClass } from "@/lib/utils";
-import ArticleImage from "@/components/ArticleView/components/ArticleImage.jsx";
-import parse from "html-react-parser";
 import { settingsState } from "@/stores/settingsStore";
 import { AnimatePresence, motion, MotionConfig } from "framer-motion";
 import { currentThemeMode, themeState } from "@/stores/themeStore.js";
-import CodeBlock from "@/components/ArticleView/components/CodeBlock.jsx";
 import { useTranslation } from "react-i18next";
-import { cn, getHostname } from "@/lib/utils.js";
+import { cn } from "@/lib/utils.js";
 import FeedIcon from "@/components/ui/FeedIcon.jsx";
 import { getArticleById } from "@/db/storage";
 import Attachments from "@/components/ArticleView/components/Attachments.jsx";
 import AISummary from "@/components/ArticleView/components/AISummary.jsx";
-import Iframe from "@/components/ArticleView/components/Iframe.jsx";
+import ArticleContentBody from "@/components/ArticleView/components/ArticleContentBody.jsx";
+import BilingualContent from "@/components/ArticleView/components/BilingualContent.jsx";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { getFontFamilyValue } from "@/lib/fontLoader";
+import { bilingualArticles } from "@/stores/bilingualStore.js";
+import { invalidateBilingualSession } from "@/handlers/bilingualHandlers.js";
 
 const ArticleView = () => {
   const { t } = useTranslation();
@@ -36,6 +36,9 @@ const ArticleView = () => {
   const [error, setError] = useState(null);
   const $activeArticle = useStore(activeArticle);
   const $filteredArticles = useStore(filteredArticles);
+  const $bilingualArticles = useStore(bilingualArticles);
+  const bilingualState = $bilingualArticles[$activeArticle?.id];
+  const isBilingualActive = bilingualState?.active;
   const {
     lineHeight,
     fontSize,
@@ -102,39 +105,11 @@ const ArticleView = () => {
     loadArticleByArticleId();
   }, [articleId, $filteredArticles]);
 
-  const handleLinkWithImg = (domNode) => {
-    const imgNodes = domNode.children.filter(
-      (child) => child.type === "tag" && child.name === "img",
-    );
-
-    if (imgNodes.length > 0) {
-      const hostname = getHostname(domNode.attribs.href);
-      return (
-        <>
-          {imgNodes.map((imgNode, index) => (
-            <ArticleImage
-              imgNode={imgNode}
-              key={imgNode.attribs?.src || index}
-            />
-          ))}
-          <div className="flex justify-center">
-            <Chip color="accent" variant="soft" className="cursor-pointer my-2">
-              <a
-                href={domNode.attribs.href}
-                className="border-none!"
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                {hostname}
-              </a>
-              <Link.Icon />
-            </Chip>
-          </div>
-        </>
-      );
-    }
-    return domNode;
-  };
+  useEffect(() => {
+    return () => {
+      invalidateBilingualSession();
+    };
+  }, [articleId]);
 
   // 检查是否有音频附件
   const audioEnclosure = $activeArticle?.enclosures?.find((enclosure) =>
@@ -284,123 +259,11 @@ const ArticleView = () => {
                         textAlign: alignJustify ? "justify" : "left",
                       }}
                     >
-                      {parse($activeArticle?.content, {
-                        replace(domNode) {
-                          // 辅助函数：检查节点是否包含需要转为 block 的内容（图片等）
-                          const hasBlockContent = (node) => {
-                            if (!node.children) return false;
-                            return node.children.some((child) => {
-                              if (child.type !== "tag") return false;
-                              if (child.name === "img") return true;
-                              if (child.name === "a") return hasBlockContent(child);
-                              return false;
-                            });
-                          };
-
-                          if (
-                            domNode.type === "tag" &&
-                            domNode.name === "img"
-                          ) {
-                            return <ArticleImage imgNode={domNode} />;
-                          }
-                          if (domNode.type === "tag" && domNode.name === "a") {
-                            return domNode.children.length > 0
-                              ? handleLinkWithImg(domNode)
-                              : domNode;
-                          }
-                          // 将包含图片的 <p> 转为 <div>，避免 <div> 嵌套在 <p> 中
-                          if (
-                            domNode.type === "tag" &&
-                            domNode.name === "p" &&
-                            hasBlockContent(domNode)
-                          ) {
-                            domNode.name = "div";
-                            return domNode;
-                          }
-                          if (
-                            domNode.type === "tag" &&
-                            domNode.name === "iframe"
-                          ) {
-                            return <Iframe domNode={domNode} />;
-                          }
-                          if (
-                            domNode.type === "tag" &&
-                            domNode.name === "pre"
-                          ) {
-                            // 1. 首先检查是否有code子节点
-                            const codeNode = domNode.children.find(
-                              (child) =>
-                                child.type === "tag" && child.name === "code",
-                            );
-
-                            // 递归获取所有文本内容的辅助函数
-                            const getTextContent = (node) => {
-                              if (!node) return "";
-                              if (node.type === "text") return node.data;
-                              if (node.type === "tag") {
-                                if (node.name === "br") return "\n";
-                                // 处理其他标签内的文本
-                                const childText = node.children
-                                  .map((child) => getTextContent(child))
-                                  .join("");
-                                // 对于块级元素,在前后添加换行
-                                if (
-                                  [
-                                    "p",
-                                    "div",
-                                    "h1",
-                                    "h2",
-                                    "h3",
-                                    "h4",
-                                    "h5",
-                                    "h6",
-                                  ].includes(node.name)
-                                ) {
-                                  return `${childText}\n`;
-                                }
-                                return childText;
-                              }
-                              return "";
-                            };
-
-                            if (codeNode) {
-                              // 2. 处理带有code标签的情况
-                              const className = codeNode.attribs?.class || "";
-                              const language =
-                                className
-                                  .split(/\s+/)
-                                  .find(
-                                    (cls) =>
-                                      cls.startsWith("language-") ||
-                                      cls.startsWith("lang-"),
-                                  )
-                                  ?.replace(/^(language-|lang-)/, "") || "text";
-
-                              const code = getTextContent(codeNode)
-                                .replace(/\n{3,}/g, "\n\n") // 将连续3个及以上换行替换为2个
-                                .trim();
-
-                              return code ? (
-                                <CodeBlock code={code} language={language} />
-                              ) : (
-                                domNode
-                              );
-                            } else {
-                              // 3. 处理直接在pre标签中的文本
-                              const code = getTextContent(domNode)
-                                .replace(/\n{3,}/g, "\n\n")
-                                .trim();
-
-                              // 如果内容为空则不处理
-                              if (!code) {
-                                return domNode;
-                              }
-
-                              return <CodeBlock code={code} language="text" />;
-                            }
-                          }
-                        },
-                      })}
+                      {isBilingualActive ? (
+                        <BilingualContent articleId={$activeArticle?.id} />
+                      ) : (
+                        <ArticleContentBody html={$activeArticle?.content} />
+                      )}
                       <Attachments article={$activeArticle} />
                     </div>
                   </PhotoProvider>

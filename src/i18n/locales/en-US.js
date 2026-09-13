@@ -29,6 +29,7 @@ export default {
     unread: "Unread",
     normal: "Normal",
     success: "Success",
+    retry: "Retry",
     error: "Error",
     article: "Articles",
     feed: "Feeds",
@@ -151,6 +152,20 @@ export default {
     aiSummarize: "AI Summary",
     aiSummary: "AI Summary",
     aiSummaryGenerating: "Generating summary...",
+    bilingualRead: "Bilingual reading",
+    bilingualClose: "Close bilingual",
+    bilingualMode: "Bilingual reading",
+    bilingualLoadingOriginal: "Loading original text...",
+    bilingualLoadOriginalFirst: "Load the original text first",
+    bilingualAlreadyTargetLanguage:
+      "The content is already in the target language",
+    bilingualSameLanguageAsSystem:
+      "This article does not need translation; it already matches your system language.",
+    bilingualPrecheckFailed: "Unable to determine whether translation is needed",
+    bilingualOriginalFailed: "Failed to load original text",
+    bilingualTranslating: "Translating...",
+    bilingualWaiting: "Waiting to translate",
+    bilingualTranslationFailed: "Translation failed",
   },
   player: {
     "Current time": "Current time",
@@ -335,10 +350,21 @@ export default {
         summary: {
           name: "Article summary",
         },
+        translation: {
+          name: "Bilingual translation",
+        },
+      },
+      builtinModels: {
+        translation: {
+          name: "Bilingual translation",
+        },
       },
       builtinPrompts: {
         summary: {
           name: "Article summary",
+        },
+        translation: {
+          name: "Bilingual translation",
         },
       },
     },

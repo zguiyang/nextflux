@@ -5,11 +5,8 @@ import {
   Description,
   Input,
   Label,
-  ListBox,
-  Select,
   Separator,
   Spinner,
-  TextArea,
   TextField,
 } from "@heroui/react";
 import { useTranslation } from "react-i18next";
@@ -19,19 +16,15 @@ import { ItemWrapper } from "@/components/ui/settingItem.jsx";
 import { testAIConnection } from "@/api/openai.js";
 import {
   SUMMARY_CAPABILITY,
+  TRANSLATION_CAPABILITY,
   buildCapabilitySaveUpdates,
   fetchModelsForService,
   getCapabilityCardState,
-  getCapabilityCardTitle,
   getPrimaryProvider,
   getUnsavedProviderCredentials,
 } from "@/components/Settings/aiSettingsState.js";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible.jsx";
-import { ChevronDown, RefreshCw } from "lucide-react";
+import CapabilityCard from "@/components/Settings/CapabilityCard.jsx";
+import { RefreshCw } from "lucide-react";
 
 export default function AI() {
   const { t } = useTranslation();
@@ -44,6 +37,7 @@ export default function AI() {
     aiCapabilities,
   });
   const summaryCard = getCapabilityCardState(settings, SUMMARY_CAPABILITY);
+  const translationCard = getCapabilityCardState(settings, TRANSLATION_CAPABILITY);
 
   const [localApiKey, setLocalApiKey] = useState(primaryProvider?.apiKey || "");
   const [localBaseUrl, setLocalBaseUrl] = useState(
@@ -54,9 +48,17 @@ export default function AI() {
   const [summaryPrompt, setSummaryPrompt] = useState(
     summaryCard.promptContent,
   );
+  const [translationModelId, setTranslationModelId] = useState(
+    translationCard.modelId,
+  );
+  const [translationPrompt, setTranslationPrompt] = useState(
+    translationCard.promptContent,
+  );
   const [summaryOpen, setSummaryOpen] = useState(true);
+  const [translationOpen, setTranslationOpen] = useState(false);
   const [loadingModels, setLoadingModels] = useState(false);
   const [testingSummary, setTestingSummary] = useState(false);
+  const [testingTranslation, setTestingTranslation] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const handleFetchModels = async () => {
@@ -79,18 +81,18 @@ export default function AI() {
     }
   };
 
-  const handleTestSummary = async () => {
-    setTestingSummary(true);
+  const handleTestCapability = async (modelId, setTesting) => {
+    setTesting(true);
     try {
       await testAIConnection({
         ...getUnsavedProviderCredentials(localApiKey, localBaseUrl),
-        model: summaryModelId,
+        model: modelId,
       });
       toast.success(t("settings.ai.testSuccess"));
     } catch (error) {
       toast.error(error.message || t("settings.ai.testFailed"));
     } finally {
-      setTestingSummary(false);
+      setTesting(false);
     }
   };
 
@@ -105,6 +107,10 @@ export default function AI() {
             [SUMMARY_CAPABILITY]: {
               modelId: summaryModelId,
               promptContent: summaryPrompt,
+            },
+            [TRANSLATION_CAPABILITY]: {
+              modelId: translationModelId,
+              promptContent: translationPrompt,
             },
           },
         }),
@@ -159,101 +165,34 @@ export default function AI() {
       </ItemWrapper>
 
       <ItemWrapper title={t("settings.ai.capabilities")}>
-        <Collapsible open={summaryOpen} onOpenChange={setSummaryOpen}>
-          <div className="bg-default/60 dark:bg-default/30">
-            <CollapsibleTrigger asChild>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between gap-2 px-2.5 py-3 text-left"
-              >
-                <span className="text-sm font-medium text-foreground">
-                  {getCapabilityCardTitle(
-                    SUMMARY_CAPABILITY,
-                    summaryModelId,
-                    t,
-                  )}
-                </span>
-                <ChevronDown
-                  className={`size-4 shrink-0 text-muted transition-transform ${summaryOpen ? "rotate-180" : ""}`}
-                />
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="overflow-visible">
-              <div className="flex flex-col gap-0 border-t border-foreground/10">
-                {availableModels.length > 0 && (
-                  <>
-                    <div className="p-2.5">
-                      <Select
-                        variant="secondary"
-                        value={
-                          availableModels.includes(summaryModelId)
-                            ? summaryModelId
-                            : null
-                        }
-                        onChange={(value) => setSummaryModelId(value || "")}
-                      >
-                        <Label>{t("settings.ai.selectModel")}</Label>
-                        <Select.Trigger>
-                          <Select.Value />
-                          <Select.Indicator />
-                        </Select.Trigger>
-                        <Select.Popover>
-                          <ListBox>
-                            {availableModels.map((model) => (
-                              <ListBox.Item
-                                key={model}
-                                id={model}
-                                textValue={model}
-                              >
-                                {model}
-                                <ListBox.ItemIndicator />
-                              </ListBox.Item>
-                            ))}
-                          </ListBox>
-                        </Select.Popover>
-                      </Select>
-                    </div>
-                    <Separator />
-                  </>
-                )}
-                <div className="p-2.5">
-                  <TextField variant="secondary">
-                    <Label>{t("settings.ai.model")}</Label>
-                    <Input
-                      type="text"
-                      value={summaryModelId}
-                      onChange={(e) => setSummaryModelId(e.target.value)}
-                      placeholder="gpt-4o-mini"
-                    />
-                  </TextField>
-                </div>
-                <Separator />
-                <div className="p-2.5">
-                  <TextField variant="secondary">
-                    <Label>{t("settings.ai.prompt")}</Label>
-                    <TextArea
-                      value={summaryPrompt}
-                      onChange={(e) => setSummaryPrompt(e.target.value)}
-                      rows={4}
-                    />
-                  </TextField>
-                </div>
-                <Separator />
-                <div className="p-2.5">
-                  <Button
-                    variant="outline"
-                    fullWidth
-                    onPress={handleTestSummary}
-                    isPending={testingSummary}
-                  >
-                    {testingSummary && <Spinner color="current" size="sm" />}
-                    {t("settings.ai.testCapability")}
-                  </Button>
-                </div>
-              </div>
-            </CollapsibleContent>
-          </div>
-        </Collapsible>
+        <div className="flex flex-col gap-2">
+          <CapabilityCard
+            capability={SUMMARY_CAPABILITY}
+            open={summaryOpen}
+            onOpenChange={setSummaryOpen}
+            modelId={summaryModelId}
+            onModelIdChange={setSummaryModelId}
+            prompt={summaryPrompt}
+            onPromptChange={setSummaryPrompt}
+            availableModels={availableModels}
+            onTest={() => handleTestCapability(summaryModelId, setTestingSummary)}
+            testing={testingSummary}
+          />
+          <CapabilityCard
+            capability={TRANSLATION_CAPABILITY}
+            open={translationOpen}
+            onOpenChange={setTranslationOpen}
+            modelId={translationModelId}
+            onModelIdChange={setTranslationModelId}
+            prompt={translationPrompt}
+            onPromptChange={setTranslationPrompt}
+            availableModels={availableModels}
+            onTest={() =>
+              handleTestCapability(translationModelId, setTestingTranslation)
+            }
+            testing={testingTranslation}
+          />
+        </div>
       </ItemWrapper>
 
       <Button fullWidth onPress={handleSave} isPending={saving}>

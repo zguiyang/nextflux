@@ -144,5 +144,48 @@ describe("AI settings", () => {
       model: { id: "fast", providerId: "openai", modelId: "fast-model" },
       prompt: { id: "summary", capability: "summary", content: "Summarize" },
     });
+
+    expect(resolveAICapability(settings, "translation")).toEqual({
+      provider: {
+        id: "openai",
+        apiKey: "provider-key",
+        baseUrl: "https://api.openai.com/v1",
+      },
+      model: { id: "quality", providerId: "openai", modelId: "quality-model" },
+      prompt: {
+        id: "translation",
+        capability: "translation",
+        content: "Translate",
+      },
+    });
+  });
+
+  it("adds translation defaults for existing persisted settings", () => {
+    const settings = migrateAISettings({
+      aiProviders: [
+        { id: "default", apiKey: "key", baseUrl: "https://api.openai.com/v1" },
+      ],
+      aiModels: [
+        { id: "default", providerId: "default", modelId: "gpt-4o-mini" },
+      ],
+      aiPrompts: [
+        {
+          id: "summary-default",
+          capability: "summary",
+          content: "Summarize",
+        },
+      ],
+      aiCapabilities: {
+        summary: { modelId: "default", promptId: "summary-default" },
+      },
+    });
+
+    expect(settings.aiCapabilities.translation).toEqual({
+      modelId: "translation",
+      promptId: "translation-default",
+    });
+    expect(
+      settings.aiPrompts.find((item) => item.capability === "translation"),
+    ).toBeTruthy();
   });
 });

@@ -2,6 +2,7 @@ import { fetchAIModels } from "@/api/openai.js";
 import { resolveAICapability } from "@/stores/settingsStore.js";
 
 export const SUMMARY_CAPABILITY = "summary";
+export const TRANSLATION_CAPABILITY = "translation";
 
 export function getSummaryBoundSelections(settings) {
   const summaryBinding = settings.aiCapabilities?.summary || {};

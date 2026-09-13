@@ -29,6 +29,7 @@ export default {
     unread: "Okunmadı",
     normal: "Normal",
     success: "Başarı",
+    retry: "Yeniden dene",
     error: "Hata",
     article: "Makaleler",
     feed: "Beslemeler",
@@ -151,6 +152,20 @@ export default {
     aiSummarize: "AI Özeti",
     aiSummary: "AI Özeti",
     aiSummaryGenerating: "Özet oluşturuluyor...",
+    bilingualRead: "İki dilli okuma",
+    bilingualClose: "İki dilli modu kapat",
+    bilingualMode: "İki dilli okuma",
+    bilingualLoadingOriginal: "Orijinal metin yükleniyor...",
+    bilingualLoadOriginalFirst: "Önce orijinal metni yükleyin",
+    bilingualAlreadyTargetLanguage: "İçerik zaten hedef dilde",
+    bilingualSameLanguageAsSystem:
+      "Bu makale çeviri gerektirmez; zaten sistem diliyle uyumludur.",
+    bilingualPrecheckFailed:
+      "Çeviri gerekip gerekmediği belirlenemedi",
+    bilingualOriginalFailed: "Orijinal metin yüklenemedi",
+    bilingualTranslating: "Çevriliyor...",
+    bilingualWaiting: "Çeviri bekleniyor",
+    bilingualTranslationFailed: "Çeviri başarısız",
   },
   player: {
     "Current time": "Şimdiki zaman",
@@ -336,10 +351,21 @@ export default {
         summary: {
           name: "Makale özeti",
         },
+        translation: {
+          name: "İki dilli çeviri",
+        },
+      },
+      builtinModels: {
+        translation: {
+          name: "İki dilli çeviri",
+        },
       },
       builtinPrompts: {
         summary: {
           name: "Makale özeti",
+        },
+        translation: {
+          name: "İki dilli çeviri",
         },
       },
     },

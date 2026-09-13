@@ -29,6 +29,7 @@ export default {
     unread: "未读",
     normal: "正常",
     success: "操作成功",
+    retry: "重试",
     error: "系统异常",
     article: "文章",
     feed: "订阅",
@@ -150,6 +151,19 @@ export default {
     aiSummarize: "AI 总结",
     aiSummary: "AI 总结",
     aiSummaryGenerating: "正在生成总结...",
+    bilingualRead: "双语阅读",
+    bilingualClose: "关闭双语",
+    bilingualMode: "双语阅读",
+    bilingualLoadingOriginal: "正在加载原文...",
+    bilingualLoadOriginalFirst: "请先加载原文",
+    bilingualAlreadyTargetLanguage: "当前内容已是目标语言，无需翻译",
+    bilingualSameLanguageAsSystem:
+      "此文章不用翻译，已与系统语言保持一致",
+    bilingualPrecheckFailed: "无法判断是否需要翻译",
+    bilingualOriginalFailed: "原文加载失败",
+    bilingualTranslating: "正在翻译...",
+    bilingualWaiting: "等待翻译",
+    bilingualTranslationFailed: "翻译失败",
   },
   player: {
     "Current time": "当前时间",
@@ -334,10 +348,21 @@ export default {
         summary: {
           name: "文章总结",
         },
+        translation: {
+          name: "双语翻译",
+        },
+      },
+      builtinModels: {
+        translation: {
+          name: "双语翻译",
+        },
       },
       builtinPrompts: {
         summary: {
           name: "文章总结",
+        },
+        translation: {
+          name: "双语翻译",
         },
       },
     },
