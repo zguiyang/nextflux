@@ -165,8 +165,7 @@ export default {
     bilingualAlreadyTargetLanguage: "İçerik zaten hedef dilde",
     bilingualSameLanguageAsSystem:
       "Bu makale çeviri gerektirmez; zaten sistem diliyle uyumludur.",
-    bilingualPrecheckFailed:
-      "Çeviri gerekip gerekmediği belirlenemedi",
+    bilingualPrecheckFailed: "Çeviri gerekip gerekmediği belirlenemedi",
     bilingualOriginalFailed: "Orijinal metin yüklenemedi",
     bilingualTranslating: "Çevriliyor...",
     bilingualWaiting: "Çeviri bekleniyor",
@@ -269,7 +268,8 @@ export default {
       sortByCreateDate: "Oluşturma tarihine göre",
       markAsReadOnScroll: "Kaydırırken okundu olarak işaretle",
       showUnreadByDefault: "Varsayılan olarak okunmamış makaleleri göster",
-      showUnreadByDefaultDescription: "Değişikliklerin geçerli olması için sayfayı yenileyin",
+      showUnreadByDefaultDescription:
+        "Değişikliklerin geçerli olması için sayfayı yenileyin",
     },
     appearance: {
       title: "Görünüm",
@@ -345,13 +345,16 @@ export default {
       apiKey: "API Anahtarı",
       apiKeyPlaceholder: "API anahtarını girin",
       baseUrl: "Temel URL",
+      apiProtocol: "API protokolü",
+      chatCompletions: "Chat Completions",
+      responses: "Responses API",
       fetchModels: "Modelleri getir",
       fetchModelsHint: "Başarılı getirmeden sonra listeden seçin",
       modelsLoaded: "{{count}} model yüklendi",
-      fetchModelsFailed:
-        "Model listesi alınamadı. Model adını manuel girin.",
+      fetchModelsFailed: "Model listesi alınamadı. Model adını manuel girin.",
       model: "Model",
       selectModel: "Model seç",
+      maxOutputTokens: "Maksimum çıktı tokenı",
       modelUnset: "Ayarlanmadı",
       prompt: "Prompt",
       testCapability: "Bu ayarı test et",

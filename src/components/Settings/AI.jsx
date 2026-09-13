@@ -1,11 +1,17 @@
 import { useStore } from "@nanostores/react";
-import { settingsState, updateSettings } from "@/stores/settingsStore.js";
+import {
+  DEFAULT_MODEL_MAX_OUTPUT_TOKENS,
+  settingsState,
+  updateSettings,
+} from "@/stores/settingsStore.js";
 import {
   Button,
   Description,
   Input,
   Label,
+  ListBox,
   Separator,
+  Select,
   Spinner,
   TextField,
 } from "@heroui/react";
@@ -37,19 +43,29 @@ export default function AI() {
     aiCapabilities,
   });
   const summaryCard = getCapabilityCardState(settings, SUMMARY_CAPABILITY);
-  const translationCard = getCapabilityCardState(settings, TRANSLATION_CAPABILITY);
+  const translationCard = getCapabilityCardState(
+    settings,
+    TRANSLATION_CAPABILITY,
+  );
 
   const [localApiKey, setLocalApiKey] = useState(primaryProvider?.apiKey || "");
   const [localBaseUrl, setLocalBaseUrl] = useState(
     primaryProvider?.baseUrl || "",
   );
+  const [localApiProtocol, setLocalApiProtocol] = useState(
+    primaryProvider?.apiProtocol === "responses" ? "responses" : "chat",
+  );
   const [availableModels, setAvailableModels] = useState([]);
   const [summaryModelId, setSummaryModelId] = useState(summaryCard.modelId);
-  const [summaryPrompt, setSummaryPrompt] = useState(
-    summaryCard.promptContent,
+  const [summaryMaxOutputTokens, setSummaryMaxOutputTokens] = useState(
+    summaryCard.maxOutputTokens,
   );
+  const [summaryPrompt, setSummaryPrompt] = useState(summaryCard.promptContent);
   const [translationModelId, setTranslationModelId] = useState(
     translationCard.modelId,
+  );
+  const [translationMaxOutputTokens, setTranslationMaxOutputTokens] = useState(
+    translationCard.maxOutputTokens,
   );
   const [translationPrompt, setTranslationPrompt] = useState(
     translationCard.promptContent,
@@ -87,6 +103,7 @@ export default function AI() {
       await testAIConnection({
         ...getUnsavedProviderCredentials(localApiKey, localBaseUrl),
         model: modelId,
+        apiProtocol: localApiProtocol,
       });
       toast.success(t("settings.ai.testSuccess"));
     } catch (error) {
@@ -96,6 +113,14 @@ export default function AI() {
     }
   };
 
+  const handleModelSelect = (setModelId, setMaxOutputTokens, modelId) => {
+    setModelId(modelId || "");
+    const selectedModel = availableModels.find((model) => model.id === modelId);
+    setMaxOutputTokens(
+      selectedModel?.maxOutputTokens || DEFAULT_MODEL_MAX_OUTPUT_TOKENS,
+    );
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -103,13 +128,16 @@ export default function AI() {
         buildCapabilitySaveUpdates(settings, {
           apiKey: localApiKey,
           baseUrl: localBaseUrl,
+          apiProtocol: localApiProtocol,
           capabilities: {
             [SUMMARY_CAPABILITY]: {
               modelId: summaryModelId,
+              maxOutputTokens: summaryMaxOutputTokens,
               promptContent: summaryPrompt,
             },
             [TRANSLATION_CAPABILITY]: {
               modelId: translationModelId,
+              maxOutputTokens: translationMaxOutputTokens,
               promptContent: translationPrompt,
             },
           },
@@ -150,6 +178,38 @@ export default function AI() {
           </TextField>
         </div>
         <Separator />
+        <div className="bg-default/60 dark:bg-default/30 p-2.5">
+          <Select
+            variant="secondary"
+            value={localApiProtocol}
+            onChange={(value) => setLocalApiProtocol(value || "chat")}
+          >
+            <Label>{t("settings.ai.apiProtocol")}</Label>
+            <Select.Trigger>
+              <Select.Value />
+              <Select.Indicator />
+            </Select.Trigger>
+            <Select.Popover>
+              <ListBox>
+                <ListBox.Item
+                  id="chat"
+                  textValue={t("settings.ai.chatCompletions")}
+                >
+                  {t("settings.ai.chatCompletions")}
+                  <ListBox.ItemIndicator />
+                </ListBox.Item>
+                <ListBox.Item
+                  id="responses"
+                  textValue={t("settings.ai.responses")}
+                >
+                  {t("settings.ai.responses")}
+                  <ListBox.ItemIndicator />
+                </ListBox.Item>
+              </ListBox>
+            </Select.Popover>
+          </Select>
+        </div>
+        <Separator />
         <div className="bg-default/60 dark:bg-default/30 p-2.5 flex flex-col gap-2">
           <Button
             variant="outline"
@@ -172,10 +232,21 @@ export default function AI() {
             onOpenChange={setSummaryOpen}
             modelId={summaryModelId}
             onModelIdChange={setSummaryModelId}
+            onModelSelect={(modelId) =>
+              handleModelSelect(
+                setSummaryModelId,
+                setSummaryMaxOutputTokens,
+                modelId,
+              )
+            }
+            maxOutputTokens={summaryMaxOutputTokens}
+            onMaxOutputTokensChange={setSummaryMaxOutputTokens}
             prompt={summaryPrompt}
             onPromptChange={setSummaryPrompt}
             availableModels={availableModels}
-            onTest={() => handleTestCapability(summaryModelId, setTestingSummary)}
+            onTest={() =>
+              handleTestCapability(summaryModelId, setTestingSummary)
+            }
             testing={testingSummary}
           />
           <CapabilityCard
@@ -184,6 +255,15 @@ export default function AI() {
             onOpenChange={setTranslationOpen}
             modelId={translationModelId}
             onModelIdChange={setTranslationModelId}
+            onModelSelect={(modelId) =>
+              handleModelSelect(
+                setTranslationModelId,
+                setTranslationMaxOutputTokens,
+                modelId,
+              )
+            }
+            maxOutputTokens={translationMaxOutputTokens}
+            onMaxOutputTokensChange={setTranslationMaxOutputTokens}
             prompt={translationPrompt}
             onPromptChange={setTranslationPrompt}
             availableModels={availableModels}

@@ -166,7 +166,8 @@ export default {
       "The content is already in the target language",
     bilingualSameLanguageAsSystem:
       "This article does not need translation; it already matches your system language.",
-    bilingualPrecheckFailed: "Unable to determine whether translation is needed",
+    bilingualPrecheckFailed:
+      "Unable to determine whether translation is needed",
     bilingualOriginalFailed: "Failed to load original text",
     bilingualTranslating: "Translating...",
     bilingualWaiting: "Waiting to translate",
@@ -269,7 +270,8 @@ export default {
       sortByCreateDate: "By create date",
       markAsReadOnScroll: "Mark as read on scroll",
       showUnreadByDefault: "Show unread articles by default",
-      showUnreadByDefaultDescription: "Refresh the page for changes to take effect",
+      showUnreadByDefaultDescription:
+        "Refresh the page for changes to take effect",
     },
     appearance: {
       title: "Appearance",
@@ -345,12 +347,16 @@ export default {
       apiKey: "API Key",
       apiKeyPlaceholder: "Enter API Key",
       baseUrl: "Base URL",
+      apiProtocol: "API protocol",
+      chatCompletions: "Chat Completions",
+      responses: "Responses API",
       fetchModels: "Fetch models",
       fetchModelsHint: "Select from the list after a successful fetch",
       modelsLoaded: "{{count}} models loaded",
       fetchModelsFailed: "No model list returned. Enter a model name manually.",
       model: "Model",
       selectModel: "Select model",
+      maxOutputTokens: "Max output tokens",
       modelUnset: "Not set",
       prompt: "Prompt",
       testCapability: "Test this setup",

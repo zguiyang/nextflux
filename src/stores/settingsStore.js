@@ -1,10 +1,14 @@
 import { persistentAtom } from "@nanostores/persistent";
 
+export const DEFAULT_MODEL_MAX_OUTPUT_TOKENS = 2048;
+export const MIN_MODEL_MAX_OUTPUT_TOKENS = 16;
+
 const defaultAIProvider = {
   id: "default",
   nameKey: "settings.ai.builtinProviders.default.name",
   apiKey: "",
   baseUrl: "https://api.openai.com/v1",
+  apiProtocol: "chat",
 };
 
 const defaultAIModel = {
@@ -12,6 +16,7 @@ const defaultAIModel = {
   providerId: defaultAIProvider.id,
   nameKey: "settings.ai.builtinModels.default.name",
   modelId: "gpt-4o-mini",
+  maxOutputTokens: DEFAULT_MODEL_MAX_OUTPUT_TOKENS,
 };
 
 const defaultAISummaryPrompt = {
@@ -28,6 +33,7 @@ const defaultAITranslationModel = {
   providerId: defaultAIProvider.id,
   nameKey: "settings.ai.builtinModels.translation.name",
   modelId: "gpt-4o-mini",
+  maxOutputTokens: DEFAULT_MODEL_MAX_OUTPUT_TOKENS,
 };
 
 const defaultAITranslationPrompt = {
@@ -88,6 +94,26 @@ const hasMixedModelCredentials = (models) =>
   Array.isArray(models) &&
   models.some((item) => "apiKey" in item || "baseUrl" in item);
 
+const normalizePositiveInteger = (value, fallback) => {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0
+    ? Math.max(MIN_MODEL_MAX_OUTPUT_TOKENS, Math.floor(number))
+    : fallback;
+};
+
+const normalizeAIProvider = (provider) => ({
+  ...provider,
+  apiProtocol: provider.apiProtocol === "responses" ? "responses" : "chat",
+});
+
+const normalizeAIModel = (model) => ({
+  ...model,
+  maxOutputTokens: normalizePositiveInteger(
+    model.maxOutputTokens,
+    DEFAULT_MODEL_MAX_OUTPUT_TOKENS,
+  ),
+});
+
 const migrateFromMixedModels = (storedValue) => {
   const providers = storedValue.aiModels.map((item) => ({
     id: item.id,
@@ -95,6 +121,7 @@ const migrateFromMixedModels = (storedValue) => {
     ...(item.nameKey ? { nameKey: item.nameKey } : {}),
     apiKey: item.apiKey ?? "",
     baseUrl: item.baseUrl ?? defaultAIProvider.baseUrl,
+    apiProtocol: "chat",
   }));
 
   const models = storedValue.aiModels.map((item) => ({
@@ -103,6 +130,10 @@ const migrateFromMixedModels = (storedValue) => {
     ...(item.name ? { name: item.name } : {}),
     ...(item.nameKey ? { nameKey: item.nameKey } : {}),
     modelId: item.model ?? item.modelId ?? defaultAIModel.modelId,
+    maxOutputTokens: normalizePositiveInteger(
+      item.maxOutputTokens,
+      DEFAULT_MODEL_MAX_OUTPUT_TOKENS,
+    ),
   }));
 
   const prompts = Array.isArray(storedValue.aiPrompts)
@@ -122,7 +153,7 @@ const migrateFromMixedModels = (storedValue) => {
     ...defaultValue,
     ...storedValue,
     aiProviders: providers,
-    aiModels: models,
+    aiModels: models.map(normalizeAIModel),
     aiPrompts: prompts,
     aiCapabilities: capabilities,
   };
@@ -147,7 +178,7 @@ const migrateFromLegacyAISettings = (storedValue) => {
     ...defaultValue,
     ...storedValue,
     aiProviders: [provider],
-    aiModels: [model],
+    aiModels: [normalizeAIModel(model)],
     aiPrompts: [prompt],
     aiCapabilities: {
       summary: {
@@ -180,8 +211,9 @@ const ensureTranslationCapability = (settings) => {
 
   return {
     ...settings,
+    aiProviders: (settings.aiProviders || []).map(normalizeAIProvider),
     aiPrompts: prompts,
-    aiModels: models,
+    aiModels: models.map(normalizeAIModel),
     aiCapabilities: capabilities,
   };
 };
@@ -201,7 +233,9 @@ export const migrateAISettings = (storedValue) => {
     storedValue.aiModel !== undefined ||
     storedValue.aiPrompt !== undefined
   ) {
-    return ensureTranslationCapability(migrateFromLegacyAISettings(storedValue));
+    return ensureTranslationCapability(
+      migrateFromLegacyAISettings(storedValue),
+    );
   }
 
   return ensureTranslationCapability({ ...defaultValue, ...storedValue });

@@ -24,6 +24,9 @@ export default function CapabilityCard({
   onOpenChange,
   modelId,
   onModelIdChange,
+  onModelSelect,
+  maxOutputTokens,
+  onMaxOutputTokensChange,
   prompt,
   onPromptChange,
   availableModels,
@@ -55,8 +58,14 @@ export default function CapabilityCard({
                 <div className="p-2.5">
                   <Select
                     variant="secondary"
-                    value={availableModels.includes(modelId) ? modelId : null}
-                    onChange={(value) => onModelIdChange(value || "")}
+                    value={
+                      availableModels.some((model) => model.id === modelId)
+                        ? modelId
+                        : null
+                    }
+                    onChange={(value) =>
+                      (onModelSelect || onModelIdChange)(value || "")
+                    }
                   >
                     <Label>{t("settings.ai.selectModel")}</Label>
                     <Select.Trigger>
@@ -66,8 +75,12 @@ export default function CapabilityCard({
                     <Select.Popover>
                       <ListBox>
                         {availableModels.map((model) => (
-                          <ListBox.Item key={model} id={model} textValue={model}>
-                            {model}
+                          <ListBox.Item
+                            key={model.id}
+                            id={model.id}
+                            textValue={model.id}
+                          >
+                            {model.id}
                             <ListBox.ItemIndicator />
                           </ListBox.Item>
                         ))}
@@ -86,6 +99,20 @@ export default function CapabilityCard({
                   value={modelId}
                   onChange={(e) => onModelIdChange(e.target.value)}
                   placeholder="gpt-4o-mini"
+                />
+              </TextField>
+            </div>
+            <Separator />
+            <div className="p-2.5">
+              <TextField variant="secondary">
+                <Label>{t("settings.ai.maxOutputTokens")}</Label>
+                <Input
+                  type="number"
+                  min="16"
+                  step="1"
+                  value={maxOutputTokens}
+                  onChange={(e) => onMaxOutputTokensChange(e.target.value)}
+                  placeholder="2048"
                 />
               </TextField>
             </div>

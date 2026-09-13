@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  migrateAISettings,
-  resolveAICapability,
-} from "./settingsStore.js";
+import { migrateAISettings, resolveAICapability } from "./settingsStore.js";
 
 describe("AI settings", () => {
   it("migrates legacy top-level AI settings", () => {
@@ -17,11 +14,13 @@ describe("AI settings", () => {
       id: "default",
       apiKey: "legacy-key",
       baseUrl: "https://example.com/v1",
+      apiProtocol: "chat",
     });
     expect(settings.aiModels[0]).toMatchObject({
       id: "default",
       providerId: "default",
       modelId: "legacy-model",
+      maxOutputTokens: 2048,
     });
     expect(settings.aiPrompts[0]).toMatchObject({
       id: "summary-default",
@@ -119,7 +118,11 @@ describe("AI settings", () => {
   it("resolves provider, model, and prompt bound to a capability", () => {
     const settings = {
       aiProviders: [
-        { id: "openai", apiKey: "provider-key", baseUrl: "https://api.openai.com/v1" },
+        {
+          id: "openai",
+          apiKey: "provider-key",
+          baseUrl: "https://api.openai.com/v1",
+        },
       ],
       aiModels: [
         { id: "fast", providerId: "openai", modelId: "fast-model" },

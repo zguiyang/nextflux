@@ -164,8 +164,7 @@ export default {
     bilingualMode: "Lecture bilingue",
     bilingualLoadingOriginal: "Chargement du texte original...",
     bilingualLoadOriginalFirst: "Chargez d'abord le texte original",
-    bilingualAlreadyTargetLanguage:
-      "Le contenu est déjà dans la langue cible",
+    bilingualAlreadyTargetLanguage: "Le contenu est déjà dans la langue cible",
     bilingualSameLanguageAsSystem:
       "Cet article n'a pas besoin d'être traduit ; il correspond déjà à la langue du système.",
     bilingualPrecheckFailed:
@@ -272,7 +271,8 @@ export default {
       sortByCreateDate: "Par date de création",
       markAsReadOnScroll: "Marquer comme lu lors du défilement",
       showUnreadByDefault: "Afficher les articles non lus par défaut",
-      showUnreadByDefaultDescription: "Actualisez la page pour appliquer les modifications",
+      showUnreadByDefaultDescription:
+        "Actualisez la page pour appliquer les modifications",
     },
     appearance: {
       title: "Apparence",
@@ -348,6 +348,9 @@ export default {
       apiKey: "Clé API",
       apiKeyPlaceholder: "Entrez la clé API",
       baseUrl: "URL de base",
+      apiProtocol: "Protocole API",
+      chatCompletions: "Chat Completions",
+      responses: "API Responses",
       fetchModels: "Récupérer les modèles",
       fetchModelsHint: "Sélectionnez dans la liste après récupération",
       modelsLoaded: "{{count}} modèles chargés",
@@ -355,6 +358,7 @@ export default {
         "Aucune liste de modèles. Saisissez un nom de modèle manuellement.",
       model: "Modèle",
       selectModel: "Sélectionner un modèle",
+      maxOutputTokens: "Nombre maximal de tokens de sortie",
       modelUnset: "Non défini",
       prompt: "Prompt",
       testCapability: "Tester cette configuration",

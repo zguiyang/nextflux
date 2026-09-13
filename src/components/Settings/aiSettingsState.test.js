@@ -142,10 +142,10 @@ describe("AI settings editor state", () => {
     await expect(
       fetchModelsForService(
         { apiKey: "key", baseUrl: "https://example.com/v1" },
-        ["gpt-4o-mini"],
+        [{ id: "gpt-4o-mini" }],
       ),
     ).resolves.toEqual({
-      models: ["gpt-4o-mini"],
+      models: [{ id: "gpt-4o-mini" }],
       status: "failed",
     });
   });
@@ -157,6 +157,7 @@ describe("AI settings editor state", () => {
       capabilities: {
         [SUMMARY_CAPABILITY]: {
           modelId: "gpt-4o",
+          maxOutputTokens: 4096,
           promptContent: "New prompt content",
         },
       },
@@ -165,21 +166,26 @@ describe("AI settings editor state", () => {
     expect(updates.aiProviders[0]).toMatchObject({
       apiKey: "new-key",
       baseUrl: "https://new.example/v1",
+      apiProtocol: "chat",
     });
     expect(updates.aiModels[0]).toMatchObject({
       id: "default",
       providerId: "default",
       modelId: "gpt-4o",
+      maxOutputTokens: 4096,
     });
     expect(updates.aiPrompts[0]).toMatchObject({
       id: "summary-default",
       content: "New prompt content",
     });
-    expect(getCapabilityCardState(
-      { ...baseSettings, ...updates },
-      SUMMARY_CAPABILITY,
-    )).toEqual({
+    expect(
+      getCapabilityCardState(
+        { ...baseSettings, ...updates },
+        SUMMARY_CAPABILITY,
+      ),
+    ).toEqual({
       modelId: "gpt-4o",
+      maxOutputTokens: 4096,
       promptContent: "New prompt content",
     });
   });
@@ -215,6 +221,7 @@ describe("AI settings editor state", () => {
       capabilities: {
         [TRANSLATION_CAPABILITY]: {
           modelId: "gpt-4.1",
+          maxOutputTokens: 3072,
           promptContent: "用户自定义提示词，保持原样",
         },
       },
@@ -227,12 +234,16 @@ describe("AI settings editor state", () => {
     expect(updates.aiModels[1]).toMatchObject({
       id: "translation",
       modelId: "gpt-4.1",
+      maxOutputTokens: 3072,
     });
-    expect(getCapabilityCardState(
-      { ...baseSettings, ...updates },
-      TRANSLATION_CAPABILITY,
-    )).toEqual({
+    expect(
+      getCapabilityCardState(
+        { ...baseSettings, ...updates },
+        TRANSLATION_CAPABILITY,
+      ),
+    ).toEqual({
       modelId: "gpt-4.1",
+      maxOutputTokens: 3072,
       promptContent: "用户自定义提示词，保持原样",
     });
   });

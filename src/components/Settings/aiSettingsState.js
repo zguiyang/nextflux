@@ -1,5 +1,9 @@
 import { fetchAIModels } from "@/api/openai.js";
-import { resolveAICapability } from "@/stores/settingsStore.js";
+import {
+  DEFAULT_MODEL_MAX_OUTPUT_TOKENS,
+  MIN_MODEL_MAX_OUTPUT_TOKENS,
+  resolveAICapability,
+} from "@/stores/settingsStore.js";
 
 export const SUMMARY_CAPABILITY = "summary";
 export const TRANSLATION_CAPABILITY = "translation";
@@ -37,6 +41,7 @@ export function getCapabilityCardState(settings, capability) {
   const { model, prompt } = resolveAICapability(settings, capability);
   return {
     modelId: model?.modelId || "",
+    maxOutputTokens: model?.maxOutputTokens || DEFAULT_MODEL_MAX_OUTPUT_TOKENS,
     promptContent: prompt?.content || "",
   };
 }
@@ -55,7 +60,7 @@ export function getCapabilityCardTitle(capability, modelId, t) {
 
 export function buildCapabilitySaveUpdates(
   settings,
-  { apiKey, baseUrl, capabilities },
+  { apiKey, baseUrl, apiProtocol, capabilities },
 ) {
   const { activeProvider } = getSummaryBoundSelections(settings);
   const providerId = activeProvider?.id || settings.aiProviders?.[0]?.id;
@@ -66,6 +71,7 @@ export function buildCapabilitySaveUpdates(
           ...provider,
           apiKey: apiKey.trim(),
           baseUrl: baseUrl.trim().replace(/\/+$/, ""),
+          apiProtocol: apiProtocol === "responses" ? "responses" : "chat",
         }
       : provider,
   );
@@ -76,10 +82,18 @@ export function buildCapabilitySaveUpdates(
     for (const [capability, card] of Object.entries(capabilityUpdates)) {
       const binding = settings.aiCapabilities?.[capability];
       if (binding?.modelId === model.id && card?.modelId !== undefined) {
+        const maxOutputTokens = Number(card.maxOutputTokens);
         return {
           ...model,
           modelId: card.modelId.trim(),
           providerId,
+          maxOutputTokens:
+            Number.isFinite(maxOutputTokens) && maxOutputTokens > 0
+              ? Math.max(
+                  MIN_MODEL_MAX_OUTPUT_TOKENS,
+                  Math.floor(maxOutputTokens),
+                )
+              : DEFAULT_MODEL_MAX_OUTPUT_TOKENS,
         };
       }
     }

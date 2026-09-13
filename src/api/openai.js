@@ -1,19 +1,101 @@
 import { getAICapability } from "@/stores/settingsStore.js";
 import {
-  estimateTranslationMaxTokens,
   getTargetLanguageInstruction,
   getTargetLanguageName,
   normalizeAppLocale,
 } from "@/lib/bilingualLanguage.js";
 
+const AI_LOG_PREFIX = "[Nextflux AI]";
+const logAI = (...args) => console.log(AI_LOG_PREFIX, ...args);
+const warnAI = (...args) => console.warn(AI_LOG_PREFIX, ...args);
+
 const normalizeBaseUrl = (baseUrl) => baseUrl.trim().replace(/\/+$/, "");
+export const DEFAULT_COMPLETION_MAX_TOKENS = 2048;
+export const CONNECTION_TEST_MAX_TOKENS = 16;
+
+const normalizeAPIProtocol = (apiProtocol) =>
+  apiProtocol === "responses" ? "responses" : "chat";
+
+const getCompletionUrl = (baseUrl, apiProtocol) =>
+  `${normalizeBaseUrl(baseUrl)}/${normalizeAPIProtocol(apiProtocol) === "responses" ? "responses" : "chat/completions"}`;
+
+const getEffectiveMaxOutputTokens = (model, requested) => {
+  const candidate = Number(requested ?? model?.maxOutputTokens);
+  if (!Number.isFinite(candidate) || candidate <= 0) {
+    return DEFAULT_COMPLETION_MAX_TOKENS;
+  }
+  return Math.max(CONNECTION_TEST_MAX_TOKENS, Math.floor(candidate));
+};
+
+const getResponseText = (payload) => {
+  if (typeof payload?.output_text === "string") {
+    return payload.output_text;
+  }
+
+  const output = Array.isArray(payload?.output) ? payload.output : [];
+  return output
+    .flatMap((item) => (Array.isArray(item?.content) ? item.content : []))
+    .filter(
+      (item) => item?.type === "output_text" && typeof item.text === "string",
+    )
+    .map((item) => item.text)
+    .join("");
+};
+
+const buildRequestMessages = (prompt, messages, extraSystemMessages = []) => [
+  ...(prompt ? [{ role: "system", content: prompt }] : []),
+  ...extraSystemMessages.map((content) => ({
+    role: "system",
+    content,
+  })),
+  ...messages,
+];
+
+const buildResponsesInput = (messages) => {
+  const inputMessages = messages.filter((message) => message.role !== "system");
+  if (inputMessages.length === 1 && inputMessages[0].role === "user") {
+    return inputMessages[0].content;
+  }
+  return inputMessages;
+};
+
+const buildRequestBody = ({
+  apiProtocol,
+  model,
+  messages,
+  stream,
+  maxOutputTokens,
+  temperature,
+}) => {
+  if (normalizeAPIProtocol(apiProtocol) === "responses") {
+    const instructions = messages
+      .filter((message) => message.role === "system")
+      .map((message) => message.content)
+      .filter(Boolean)
+      .join("\n\n");
+    return {
+      model,
+      input: buildResponsesInput(messages),
+      stream,
+      max_output_tokens: maxOutputTokens,
+      ...(instructions ? { instructions } : {}),
+      ...(temperature !== undefined ? { temperature } : {}),
+    };
+  }
+
+  return {
+    model,
+    stream,
+    messages,
+    max_tokens: maxOutputTokens,
+    ...(temperature !== undefined ? { temperature } : {}),
+  };
+};
 
 const getAPIError = async (response) => {
   const error = await response.json().catch(() => ({}));
   return new Error(
-    error?.error?.message ||
-      error?.message ||
-      `API error: ${response.status}`,
+    error?.error?.message || error?.message || `API error: ${response.status}`,
   );
 };
 
@@ -25,6 +107,7 @@ const getAIRequestOptions = (apiKey) => ({
 });
 
 export const fetchAIModels = async ({ apiKey, baseUrl }) => {
+  logAI("models request start", { baseUrl: baseUrl || "" });
   if (!apiKey) throw new Error("AI API Key not configured");
   if (!baseUrl) throw new Error("AI Base URL not configured");
 
@@ -32,6 +115,11 @@ export const fetchAIModels = async ({ apiKey, baseUrl }) => {
     `${normalizeBaseUrl(baseUrl)}/models`,
     getAIRequestOptions(apiKey),
   );
+  logAI("models response received", {
+    status: response.status,
+    ok: response.ok,
+    contentType: response.headers?.get?.("content-type") || "unknown",
+  });
   if (!response.ok) throw await getAPIError(response);
 
   const payload = await response.json();
@@ -40,38 +128,80 @@ export const fetchAIModels = async ({ apiKey, baseUrl }) => {
     : Array.isArray(payload?.data)
       ? payload.data
       : [];
+  const normalizedModels = models
+    .map((model) => {
+      if (typeof model === "string") return { id: model };
+      if (!model?.id) return null;
 
-  return [
-    ...new Set(
-      models
-        .map((model) => (typeof model === "string" ? model : model?.id))
-        .filter(Boolean),
-    ),
-  ].sort((a, b) => a.localeCompare(b));
+      const maxOutputTokens = Number(
+        model.max_output_tokens ??
+          model.max_completion_tokens ??
+          model.maxOutputTokens,
+      );
+      return {
+        id: model.id,
+        ...(Number.isFinite(maxOutputTokens) && maxOutputTokens > 0
+          ? {
+              maxOutputTokens: Math.max(
+                CONNECTION_TEST_MAX_TOKENS,
+                Math.floor(maxOutputTokens),
+              ),
+            }
+          : {}),
+      };
+    })
+    .filter(Boolean);
+  const uniqueModels = Array.from(
+    new Map(normalizedModels.map((model) => [model.id, model])).values(),
+  ).sort((a, b) => a.id.localeCompare(b.id));
+  logAI("models response parsed", { modelCount: uniqueModels.length });
+  return uniqueModels;
 };
 
-export const testAIConnection = async ({ apiKey, baseUrl, model }) => {
+export const testAIConnection = async ({
+  apiKey,
+  baseUrl,
+  model,
+  apiProtocol,
+}) => {
+  const protocol = normalizeAPIProtocol(apiProtocol);
+  logAI("connection test start", {
+    baseUrl: baseUrl || "",
+    model: model || "",
+    protocol,
+  });
   if (!apiKey) throw new Error("AI API Key not configured");
   if (!baseUrl) throw new Error("AI Base URL not configured");
   if (!model?.trim()) throw new Error("AI model not configured");
 
-  const response = await fetch(
-    `${normalizeBaseUrl(baseUrl)}/chat/completions`,
-    {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: model.trim(),
-        messages: [{ role: "user", content: "hi" }],
-        max_tokens: 1,
-      }),
+  const response = await fetch(getCompletionUrl(baseUrl, protocol), {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
     },
-  );
+    body: JSON.stringify({
+      model: model.trim(),
+      ...(protocol === "responses"
+        ? {
+            input: "Reply with OK.",
+            stream: false,
+            max_output_tokens: CONNECTION_TEST_MAX_TOKENS,
+          }
+        : {
+            messages: [{ role: "user", content: "Reply with OK." }],
+            stream: false,
+            max_tokens: CONNECTION_TEST_MAX_TOKENS,
+          }),
+    }),
+  });
+  logAI("connection test response", {
+    status: response.status,
+    ok: response.ok,
+  });
   if (!response.ok) throw await getAPIError(response);
+  logAI("connection test succeeded", { model: model.trim(), protocol });
 };
 
 const getPlainText = (html) => {
@@ -79,7 +209,10 @@ const getPlainText = (html) => {
     const doc = new DOMParser().parseFromString(html, "text/html");
     return doc.body.innerText.replace(/\s+/g, " ").trim();
   } catch {
-    return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    return html
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 };
 
@@ -136,16 +269,22 @@ function createThinkFilter(onChunk) {
   };
 }
 
-const capabilityChat = async (
-  capability,
-  messages,
-  options = {},
-) => {
+const capabilityChat = async (capability, messages, options = {}) => {
   const { provider, model, prompt } = getAICapability(capability);
   const aiApiKey = provider?.apiKey;
   const aiBaseUrl = provider?.baseUrl;
   const aiModel = model?.modelId;
   const aiPrompt = prompt?.content;
+  const apiProtocol = normalizeAPIProtocol(provider?.apiProtocol);
+
+  logAI("capability resolved", {
+    capability,
+    hasApiKey: Boolean(aiApiKey),
+    baseUrl: aiBaseUrl || "",
+    model: aiModel || "",
+    protocol: apiProtocol,
+    hasPrompt: Boolean(aiPrompt),
+  });
 
   if (!aiApiKey) {
     throw new Error("AI API Key not configured");
@@ -159,46 +298,88 @@ const capabilityChat = async (
   }
 
   const baseUrl = normalizeBaseUrl(aiBaseUrl);
-  const requestMessages = [
-    ...(aiPrompt ? [{ role: "system", content: aiPrompt }] : []),
-    ...(options.extraSystemMessages || []).map((content) => ({
-      role: "system",
-      content,
-    })),
-    ...messages,
-  ];
+  const requestMessages = buildRequestMessages(
+    aiPrompt,
+    messages,
+    options.extraSystemMessages || [],
+  );
+  const maxOutputTokens = getEffectiveMaxOutputTokens(
+    model,
+    options.max_tokens,
+  );
+  const url = getCompletionUrl(baseUrl, apiProtocol);
+
+  logAI("request start", {
+    capability,
+    mode: "json",
+    protocol: apiProtocol,
+    url,
+    model: aiModel.trim(),
+    messageCount: requestMessages.length,
+    maxTokens: maxOutputTokens,
+  });
 
   let response;
   try {
-    response = await fetch(`${baseUrl}/chat/completions`, {
+    response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${aiApiKey}`,
       },
       signal: options.signal,
-      body: JSON.stringify({
-        model: aiModel.trim(),
-        stream: false,
-        messages: requestMessages,
-        max_tokens: options.max_tokens ?? 2000,
-        temperature: options.temperature ?? 0.3,
-      }),
+      body: JSON.stringify(
+        buildRequestBody({
+          apiProtocol,
+          model: aiModel.trim(),
+          messages: requestMessages,
+          stream: false,
+          maxOutputTokens,
+          temperature: options.temperature ?? 0.3,
+        }),
+      ),
     });
   } catch (err) {
     if (err?.name === "AbortError") {
+      logAI("request aborted", { capability, mode: "json" });
       return { aborted: true };
     }
+    warnAI("request failed", {
+      capability,
+      mode: "json",
+      name: err?.name,
+      message: err?.message || String(err),
+    });
     throw err;
   }
+
+  logAI("response received", {
+    capability,
+    mode: "json",
+    protocol: apiProtocol,
+    status: response.status,
+    ok: response.ok,
+    contentType: response.headers?.get?.("content-type") || "unknown",
+  });
 
   if (!response.ok) {
     throw await getAPIError(response);
   }
 
   const payload = await response.json();
+  const content =
+    (apiProtocol === "responses"
+      ? getResponseText(payload)
+      : payload.choices?.[0]?.message?.content
+    )?.trim() || "";
+  logAI("response parsed", {
+    capability,
+    mode: "json",
+    choiceCount: Array.isArray(payload.choices) ? payload.choices.length : 0,
+    contentChars: content.length,
+  });
   return {
-    content: payload.choices?.[0]?.message?.content?.trim() || "",
+    content,
   };
 };
 
@@ -244,7 +425,13 @@ export const checkTranslationNeeded = async ({
   signal,
 }) => {
   const locale = normalizeAppLocale(targetLanguage || "en-US");
-  const sample = String(content || "").trim().slice(0, 1000);
+  const sample = String(content || "")
+    .trim()
+    .slice(0, 1000);
+  logAI("translation precheck start", {
+    targetLanguage: locale,
+    sampleChars: sample.length,
+  });
   if (!sample) {
     return { error: new Error("Precheck sample is empty"), invalid: true };
   }
@@ -260,8 +447,8 @@ export const checkTranslationNeeded = async ({
       ],
       {
         signal,
-        max_tokens: 128,
-        temperature: 0,
+        max_tokens: DEFAULT_COMPLETION_MAX_TOKENS,
+        temperature: 0.2,
         extraSystemMessages: [
           getTargetLanguageInstruction(locale),
           'Determine whether the article excerpt needs translation into the target system language. Reply with JSON only in this exact shape: {"shouldTranslate":true,"confidence":0.95}. Use shouldTranslate=false when the excerpt is already in the target language.',
@@ -274,6 +461,11 @@ export const checkTranslationNeeded = async ({
     }
 
     const parsed = parseTranslationPrecheckResponse(result.content);
+    logAI("translation precheck result", {
+      valid: parsed.valid,
+      shouldTranslate: parsed.valid ? parsed.shouldTranslate : undefined,
+      confidence: parsed.valid ? parsed.confidence : undefined,
+    });
     if (!parsed.valid) {
       return {
         error: new Error("Invalid precheck response"),
@@ -299,90 +491,172 @@ const streamCapabilityChat = async (
   { onChunk, onDone, onError },
   options = {},
 ) => {
-  const { provider, model, prompt } = getAICapability(capability);
-  const aiApiKey = provider?.apiKey;
-  const aiBaseUrl = provider?.baseUrl;
-  const aiModel = model?.modelId;
-  const aiPrompt = prompt?.content;
+  let settled = false;
+  const finish = () => {
+    if (settled) return;
+    settled = true;
+    onDone();
+  };
+  const fail = (error) => {
+    if (settled) return;
+    settled = true;
+    onError(error instanceof Error ? error : new Error(String(error)));
+  };
 
-  if (!aiApiKey) {
-    onError(new Error("AI API Key not configured"));
-    return;
-  }
-  if (!aiModel?.trim()) {
-    onError(new Error("AI model not configured"));
-    return;
-  }
-
-  const baseUrl = normalizeBaseUrl(aiBaseUrl);
-  const requestMessages = [
-    ...(aiPrompt ? [{ role: "system", content: aiPrompt }] : []),
-    ...(options.extraSystemMessages || []).map((content) => ({
-      role: "system",
-      content,
-    })),
-    ...messages,
-  ];
-
-  let response;
   try {
-    response = await fetch(`${baseUrl}/chat/completions`, {
+    const { provider, model, prompt } = getAICapability(capability);
+    const aiApiKey = provider?.apiKey;
+    const aiBaseUrl = provider?.baseUrl;
+    const aiModel = model?.modelId;
+    const aiPrompt = prompt?.content;
+    const apiProtocol = normalizeAPIProtocol(provider?.apiProtocol);
+
+    logAI("capability resolved", {
+      capability,
+      hasApiKey: Boolean(aiApiKey),
+      baseUrl: aiBaseUrl || "",
+      model: aiModel || "",
+      protocol: apiProtocol,
+      hasPrompt: Boolean(aiPrompt),
+    });
+
+    if (!aiApiKey) {
+      fail(new Error("AI API Key not configured"));
+      return;
+    }
+    if (!aiModel?.trim()) {
+      fail(new Error("AI model not configured"));
+      return;
+    }
+
+    const baseUrl = normalizeBaseUrl(aiBaseUrl);
+    const requestMessages = buildRequestMessages(
+      aiPrompt,
+      messages,
+      options.extraSystemMessages || [],
+    );
+    const maxOutputTokens = getEffectiveMaxOutputTokens(
+      model,
+      options.max_tokens,
+    );
+    const url = getCompletionUrl(baseUrl, apiProtocol);
+
+    logAI("request start", {
+      capability,
+      mode: "stream",
+      protocol: apiProtocol,
+      url,
+      model: aiModel.trim(),
+      messageCount: requestMessages.length,
+      maxTokens: maxOutputTokens,
+    });
+
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${aiApiKey}`,
       },
       signal: options.signal,
-      body: JSON.stringify({
-        model: aiModel.trim(),
-        stream: true,
-        messages: requestMessages,
-        max_tokens: options.max_tokens ?? 2000,
-        temperature: options.temperature ?? 0.3,
-      }),
+      body: JSON.stringify(
+        buildRequestBody({
+          apiProtocol,
+          model: aiModel.trim(),
+          messages: requestMessages,
+          stream: true,
+          maxOutputTokens,
+          temperature: options.temperature ?? 0.3,
+        }),
+      ),
     });
-  } catch (err) {
-    if (err?.name === "AbortError") {
-      onDone();
+    logAI("response received", {
+      capability,
+      mode: "stream",
+      protocol: apiProtocol,
+      status: response.status,
+      ok: response.ok,
+      contentType: response.headers?.get?.("content-type") || "unknown",
+    });
+    if (!response.ok) {
+      fail(await getAPIError(response));
       return;
     }
-    onError(err);
-    return;
-  }
 
-  if (!response.ok) {
-    onError(await getAPIError(response));
-    return;
-  }
+    const reader = response.body?.getReader?.();
+    if (!reader) {
+      throw new Error("AI response body is not readable");
+    }
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let sseBuffer = "";
-  const pushChunk = createThinkFilter(onChunk);
+    const decoder = new TextDecoder();
+    let sseBuffer = "";
+    let rawResponseText = "";
+    let emittedContent = false;
+    let readCount = 0;
+    let sseDataCount = 0;
+    let emittedChunkCount = 0;
+    let emittedCharCount = 0;
+    const pushChunk = createThinkFilter((chunk) => {
+      if (!chunk) return;
+      emittedContent = true;
+      emittedChunkCount += 1;
+      emittedCharCount += chunk.length;
+      onChunk(chunk);
+    });
 
-  try {
     const processLine = (line) => {
       const trimmed = line.trim();
       if (!trimmed || trimmed === "data: [DONE]") return;
-      if (!trimmed.startsWith("data: ")) return;
+      if (!trimmed.startsWith("data:")) return;
+      sseDataCount += 1;
 
+      let json;
       try {
-        const json = JSON.parse(trimmed.slice(6));
-        const delta = json.choices?.[0]?.delta?.content;
-        if (delta) pushChunk(delta);
+        json = JSON.parse(trimmed.slice(5).trimStart());
       } catch {
-        // skip malformed SSE lines
+        // Skip malformed SSE lines while preserving the rest of the stream.
+        return;
       }
+
+      if (json.type === "error" || json.type === "response.failed") {
+        throw new Error(
+          json.message ||
+            json.response?.error?.message ||
+            "Responses API request failed",
+        );
+      }
+      if (json.type === "response.incomplete") {
+        throw new Error(
+          `Responses API response incomplete: ${json.response?.incomplete_details?.reason || "unknown reason"}`,
+        );
+      }
+
+      const delta =
+        apiProtocol === "responses"
+          ? json.type === "response.output_text.delta"
+            ? json.delta
+            : json.type === "response.output_text.done" && !emittedContent
+              ? json.text
+              : json.type === "response.completed" && !emittedContent
+                ? getResponseText(json.response)
+                : ""
+          : json.choices?.[0]?.delta?.content;
+      if (delta) pushChunk(delta);
     };
 
     while (true) {
       const { done, value } = await reader.read();
+      readCount += 1;
 
       if (value) {
-        sseBuffer += decoder.decode(value, { stream: true });
+        const decoded = decoder.decode(value, { stream: true });
+        rawResponseText += decoded;
+        sseBuffer += decoded;
       }
 
       if (done) {
+        const decoded = decoder.decode();
+        rawResponseText += decoded;
+        sseBuffer += decoded;
         if (sseBuffer.trim()) {
           processLine(sseBuffer);
         }
@@ -396,19 +670,66 @@ const streamCapabilityChat = async (
         processLine(line);
       }
     }
-    onDone();
+
+    if (!emittedContent && rawResponseText.trim()) {
+      try {
+        const payload = JSON.parse(rawResponseText.trim());
+        const content =
+          apiProtocol === "responses"
+            ? getResponseText(payload)
+            : payload.choices?.[0]?.message?.content ||
+              payload.choices?.[0]?.text ||
+              "";
+        if (content) {
+          onChunk(content);
+          emittedContent = true;
+          emittedChunkCount += 1;
+          emittedCharCount += content.length;
+        }
+      } catch {
+        // The response was neither valid JSON nor a usable SSE stream.
+      }
+    }
+
+    if (!emittedContent) {
+      throw new Error("AI returned an empty or unsupported response");
+    }
+    logAI("stream completed", {
+      capability,
+      readCount,
+      sseDataCount,
+      emittedChunkCount,
+      emittedCharCount,
+      rawResponseChars: rawResponseText.length,
+    });
+    finish();
   } catch (err) {
     if (err?.name === "AbortError") {
-      onDone();
+      logAI("request aborted", { capability, mode: "stream" });
+      finish();
       return;
     }
-    onError(err);
+    warnAI("request failed", {
+      capability,
+      mode: "stream",
+      name: err?.name,
+      message: err?.message || String(err),
+    });
+    fail(err);
   }
 };
 
-export const summarizeArticleStream = async (article, { onChunk, onDone, onError }) => {
+export const summarizeArticleStream = async (
+  article,
+  { onChunk, onDone, onError },
+) => {
   const plainText = getPlainText(article.content || "");
   const title = article.title || "";
+  logAI("summary start", {
+    articleId: article.id,
+    titleChars: title.length,
+    contentChars: plainText.length,
+  });
 
   return streamCapabilityChat(
     "summary",
@@ -425,13 +746,17 @@ export const summarizeArticleStream = async (article, { onChunk, onDone, onError
 export const translateTextStream = async (
   text,
   { onChunk, onDone, onError, targetLanguage, signal },
-) =>
-  streamCapabilityChat(
+) => {
+  logAI("translation start", {
+    targetLanguage: targetLanguage || "en-US",
+    contentChars: String(text || "").length,
+  });
+
+  return streamCapabilityChat(
     "translation",
     [{ role: "user", content: text }],
     { onChunk, onDone, onError },
     {
-      max_tokens: estimateTranslationMaxTokens(text),
       temperature: 0.2,
       extraSystemMessages: [
         getTargetLanguageInstruction(targetLanguage || "en-US"),
@@ -439,3 +764,4 @@ export const translateTextStream = async (
       signal,
     },
   );
+};
