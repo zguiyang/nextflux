@@ -2,7 +2,7 @@
 
 A modern web-based RSS reader for [Miniflux](https://github.com/miniflux/v2), built with React, Vite, and HeroUI.
 
-This repository is a community-maintained fork of [electh/nextflux](https://github.com/electh/nextflux). It is developed independently for additional features, usability improvements, and personal deployment needs. It is not affiliated with or endorsed by the upstream project.
+This repository follows [electh/nextflux](https://github.com/electh/nextflux) and adds personal features, usability improvements, and deployment customizations on top of it.
 
 ![Nextflux preview](images/preview.png)
 ![Nextflux dark mode](images/dark.png)
@@ -156,9 +156,8 @@ npm test         # Run the test suite
 - Original project author: [@electh](https://github.com/electh)
 - This repository began as a fork of the upstream project.
 - The Git history is retained so the origin of the code and subsequent changes remain traceable.
-- This fork may diverge from upstream and is maintained on its own schedule.
-
-Please do not present this repository as the official Nextflux project. Upstream fixes and security updates may be incorporated selectively when they are relevant to this fork.
+- Upstream changes and security updates may be incorporated selectively when they are relevant to this fork.
+- Feel free to fork, adapt, and build on this project for your own needs—just keep the original attribution and follow the applicable license terms.
 
 ## Attribution and license
 
